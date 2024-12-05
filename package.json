@@ -3,14 +3,15 @@
   "version": "0.1.1",
   "description": "A comprehensive TypeScript library designed to make Nostr keys human-readable and easier to manage. It supports seedphrase generation, key conversions between nsec/npub and hex formats, and provides secure key management utilities.",
   "main": "dist/index.js",
+  "type": "module",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "build": "tsc",
-    "lint": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
@@ -30,19 +31,25 @@
   "author": "vveerrgg",
   "license": "MIT",
   "dependencies": {
-    "bip39": "^3.1.0",
-    "nostr-tools": "^1.12.0"
+    "@noble/curves": "^1.3.0",
+    "@noble/hashes": "^1.3.3",
+    "@noble/secp256k1": "^2.0.0",
+    "bip39": "^3.1.0"
+  },
+  "peerDependencies": {
+    "nostr-tools": "^2.10.4"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.3",
-    "@types/node": "^20.4.5",
-    "@typescript-eslint/eslint-plugin": "^6.2.0",
-    "@typescript-eslint/parser": "^6.2.0",
-    "eslint": "^8.45.0",
-    "jest": "^29.6.2",
-    "prettier": "^3.0.0",
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.4",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2",
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.1.0",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.3.3"
   },
   "repository": {
     "type": "git",
