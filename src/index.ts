@@ -1,5 +1,7 @@
-import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
+import { getPublicKey, nip19 } from 'nostr-tools';
+import * as secp256k1 from '@noble/secp256k1';
 import * as bip39 from 'bip39';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 
 export interface KeyPair {
   nsec: string;
@@ -25,11 +27,11 @@ export class NostrSeedPhrase {
         throw new Error('Invalid nsec format');
       }
 
-      // Convert the hex private key to bytes
-      const privateKeyBytes = Buffer.from(data as string, 'hex');
+      // Convert the hex private key to bytes and back to hex for bip39
+      const privateKeyHex = bytesToHex(data as Uint8Array);
       
       // Generate mnemonic from the private key bytes
-      const seedPhrase = bip39.entropyToMnemonic(privateKeyBytes);
+      const seedPhrase = bip39.entropyToMnemonic(privateKeyHex);
 
       return {
         seedPhrase
@@ -50,14 +52,14 @@ export class NostrSeedPhrase {
         throw new Error('Invalid mnemonic phrase');
       }
 
-      // Convert mnemonic to entropy (private key bytes)
+      // Convert mnemonic to entropy (private key hex)
       const privateKeyHex = bip39.mnemonicToEntropy(seedPhrase);
       
       // Generate nsec
-      const nsec = nip19.nsecEncode(privateKeyHex);
+      const nsec = nip19.nsecEncode(hexToBytes(privateKeyHex));
       
       // Generate public key
-      const publicKeyHex = getPublicKey(privateKeyHex);
+      const publicKeyHex = getPublicKey(hexToBytes(privateKeyHex));
       const npub = nip19.npubEncode(publicKeyHex);
 
       return {
@@ -87,17 +89,18 @@ export class NostrSeedPhrase {
   static generateNew(): KeyPairWithSeed {
     try {
       // Generate a new private key
-      const privateKeyHex = generatePrivateKey();
+      const privateKeyBytes = secp256k1.utils.randomPrivateKey();
+      const privateKeyHex = bytesToHex(privateKeyBytes);
       
       // Convert to nsec
-      const nsec = nip19.nsecEncode(privateKeyHex);
+      const nsec = nip19.nsecEncode(privateKeyBytes);
       
       // Generate public key
-      const publicKeyHex = getPublicKey(privateKeyHex);
+      const publicKeyHex = getPublicKey(privateKeyBytes);
       const npub = nip19.npubEncode(publicKeyHex);
       
       // Convert private key to seed phrase
-      const { seedPhrase } = this.nsecToSeed(nsec);
+      const seedPhrase = bip39.entropyToMnemonic(privateKeyHex);
 
       return {
         nsec,
@@ -123,8 +126,8 @@ export class NostrSeedPhrase {
         throw new Error('Invalid hex private key format. Must be 64 characters of hex.');
       }
 
-      const nsec = nip19.nsecEncode(privateKeyHex);
-      const publicKeyHex = getPublicKey(privateKeyHex);
+      const nsec = nip19.nsecEncode(hexToBytes(privateKeyHex));
+      const publicKeyHex = getPublicKey(hexToBytes(privateKeyHex));
       const npub = nip19.npubEncode(publicKeyHex);
 
       return {
@@ -149,7 +152,7 @@ export class NostrSeedPhrase {
       if (type !== 'nsec') {
         throw new Error('Invalid nsec format');
       }
-      return data as string;
+      return bytesToHex(data as Uint8Array);
     } catch (error) {
       throw new Error(`Failed to convert nsec to hex: ${(error as Error).message}`);
     }
@@ -166,7 +169,7 @@ export class NostrSeedPhrase {
       if (type !== 'npub') {
         throw new Error('Invalid npub format');
       }
-      return data as string;
+      return bytesToHex(data as Uint8Array);
     } catch (error) {
       throw new Error(`Failed to convert npub to hex: ${(error as Error).message}`);
     }
@@ -179,10 +182,6 @@ export class NostrSeedPhrase {
    */
   static hexToNpub(publicKeyHex: string): string {
     try {
-      // Validate hex format
-      if (!/^[0-9a-fA-F]{64}$/.test(publicKeyHex)) {
-        throw new Error('Invalid hex public key format. Must be 64 characters of hex.');
-      }
       return nip19.npubEncode(publicKeyHex);
     } catch (error) {
       throw new Error(`Failed to convert hex to npub: ${(error as Error).message}`);
@@ -196,11 +195,7 @@ export class NostrSeedPhrase {
    */
   static hexToNsec(privateKeyHex: string): string {
     try {
-      // Validate hex format
-      if (!/^[0-9a-fA-F]{64}$/.test(privateKeyHex)) {
-        throw new Error('Invalid hex private key format. Must be 64 characters of hex.');
-      }
-      return nip19.nsecEncode(privateKeyHex);
+      return nip19.nsecEncode(hexToBytes(privateKeyHex));
     } catch (error) {
       throw new Error(`Failed to convert hex to nsec: ${(error as Error).message}`);
     }
