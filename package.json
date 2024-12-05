@@ -1,5 +1,5 @@
 {
-  "name": "nostr-nsec-seedphrase",
+  "name": "@humanjavaenterprises/nostr-nsec-seedphrase",
   "version": "0.1.1",
   "description": "A comprehensive TypeScript library designed to make Nostr keys human-readable and easier to manage. It supports seedphrase generation, key conversions between nsec/npub and hex formats, and provides secure key management utilities.",
   "main": "dist/index.js",
@@ -50,6 +50,9 @@
     "prettier": "^3.1.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.3"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "repository": {
     "type": "git",
