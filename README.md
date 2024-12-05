@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/nostr-nsec-seedphrase.svg)](https://badge.fury.io/js/nostr-nsec-seedphrase)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-4.9.5-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js CI](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/workflows/Node.js%20CI/badge.svg)](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/actions)
+[![Node.js CI](https://github.com/vveerrgg/nostr-nsec-seedphrase/workflows/Node.js%20CI/badge.svg)](https://github.com/vveerrgg/nostr-nsec-seedphrase/actions)
 
 A comprehensive TypeScript library for managing Nostr keys, including seedphrase generation, key conversions, and secure key management.
 
