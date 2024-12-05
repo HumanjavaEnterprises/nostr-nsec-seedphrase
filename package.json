@@ -1,16 +1,16 @@
 {
   "name": "nostr-nsec-seedphrase",
   "version": "0.1.0",
-  "description": "Convert Nostr nsec keys to human-readable seed phrases and back",
+  "description": "A comprehensive TypeScript library for managing Nostr keys, including seedphrase generation, key conversions, and secure key management",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
     "test": "jest",
-    "lint": "eslint src --ext .ts",
+    "build": "tsc",
+    "lint": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
@@ -18,13 +18,16 @@
   },
   "keywords": [
     "nostr",
-    "nsec",
-    "seedphrase",
-    "mnemonic",
+    "cryptocurrency",
+    "bitcoin",
     "bip39",
-    "cryptocurrency"
+    "seedphrase",
+    "typescript",
+    "key-management",
+    "nsec",
+    "npub"
   ],
-  "author": "",
+  "author": "vveerrgg",
   "license": "MIT",
   "dependencies": {
     "bip39": "^3.1.0",
@@ -43,10 +46,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/nostr-nsec-seedphrase.git"
+    "url": "git+https://github.com/humanjavaenterprises/nostr-nsec-seedphrase.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/nostr-nsec-seedphrase/issues"
+    "url": "https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/issues"
   },
-  "homepage": "https://github.com/yourusername/nostr-nsec-seedphrase#readme"
+  "homepage": "https://github.com/humanjavaenterprises/nostr-nsec-seedphrase#readme"
 }
