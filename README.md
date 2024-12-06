@@ -25,7 +25,7 @@ Developers using this library must inform their users about the critical nature 
 ## Installation
 
 ```bash
-npm install nostr-nsec-seedphrase
+npm install @humanjavaenterprises/nostr-nsec-seedphrase
 ```
 
 ## Usage
@@ -33,18 +33,45 @@ npm install nostr-nsec-seedphrase
 ### Basic Key Generation
 
 ```typescript
-import { NostrSeedPhrase } from 'nostr-nsec-seedphrase';
+import { 
+  generateKeyPairWithSeed,
+  nsecToHex,
+  npubToHex,
+  hexToNpub,
+  hexToNsec,
+  validateSeedPhrase,
+  seedPhraseToKeyPair
+} from '@humanjavaenterprises/nostr-nsec-seedphrase';
 
-// Generate new keys with mnemonic
-const keys = await NostrSeedPhrase.generateNew();
-console.log(keys);
+// Generate new keys with seed phrase
+const keyPair = generateKeyPairWithSeed();
+console.log(keyPair);
 // {
-//   mnemonic: "your twelve word mnemonic phrase here",
+//   seedPhrase: "your twelve word seed phrase here",
 //   nsec: "nsec1...",
 //   npub: "npub1...",
-//   privateKeyHex: "hex...",
-//   publicKeyHex: "hex..."
+//   privateKey: "hex...",
+//   publicKey: "hex..."
 // }
+
+// Validate the seed phrase
+const isValid = validateSeedPhrase(keyPair.seedPhrase);
+console.log(isValid); // true
+```
+
+### Converting Between Formats
+
+```typescript
+// Convert hex to nsec/npub
+const nsec = hexToNsec('your-hex-private-key');
+const npub = hexToNpub('your-hex-public-key');
+
+// Convert nsec/npub to hex
+const privateKeyHex = nsecToHex('nsec1...');
+const publicKeyHex = npubToHex('npub1...');
+
+// Convert seed phrase to key pair
+const keyPair = seedPhraseToKeyPair('your twelve word seed phrase here');
 ```
 
 ### Converting Nsec to Seedphrase
@@ -91,18 +118,18 @@ console.log(npub); // "npub1..."
 
 ## API Reference
 
-### `generateNew()`
+### `generateKeyPairWithSeed()`
 
-Generates a new Nostr key pair with mnemonic phrase.
+Generates a new Nostr key pair with seed phrase. This is useful when you need to provide users with a recoverable key pair.
 
 **Returns:**
 ```typescript
 {
-  mnemonic: string;
-  nsec: string;
-  npub: string;
-  privateKeyHex: string;
-  publicKeyHex: string;
+  seedPhrase: string;  // BIP39 seed phrase for key recovery
+  nsec: string;        // Private key in bech32 format
+  npub: string;        // Public key in bech32 format
+  privateKey: string;  // Private key in hex format
+  publicKey: string;   // Public key in hex format
 }
 ```
 
@@ -113,7 +140,7 @@ Converts a Nostr private key to a BIP39 seed phrase.
 **Parameters:**
 - `nsec`: The nsec format private key
 
-**Returns:** `Promise<string>` - The BIP39 seed phrase
+**Returns:** `string` - The BIP39 seed phrase
 
 ### `seedToNsec(seedPhrase: string)`
 
@@ -122,7 +149,7 @@ Converts a BIP39 seed phrase back to a Nostr key pair.
 **Parameters:**
 - `seedPhrase`: The BIP39 seed phrase
 
-**Returns:** `Promise<string>` - The nsec format private key
+**Returns:** `string` - The nsec format private key
 
 ### `hexToNsec(hexPrivateKey: string)`
 
@@ -163,7 +190,7 @@ Converts a hex public key to npub format.
 ## Security Best Practices
 
 1. **Never Share Private Keys**: Keep your nsec and private key hex values secure and never share them.
-2. **Backup Mnemonics**: Safely store your mnemonic phrase in a secure location.
+2. **Backup Seed Phrases**: Safely store your seed phrase in a secure location.
 3. **Verify Keys**: Always verify key pairs after generation or conversion.
 4. **Environment Variables**: Use environment variables for storing sensitive keys in production.
 5. **Memory Management**: Clear sensitive data from memory when no longer needed.

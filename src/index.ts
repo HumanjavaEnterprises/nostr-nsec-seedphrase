@@ -23,9 +23,9 @@ export function generateSeedPhrase(): string {
 }
 
 /**
- * Convert a seed phrase to a private key
+ * Convert a seed phrase to entropy which can be used as a private key
  */
-export function seedPhraseToPrivateKey(seedPhrase: string): string {
+export function seedPhraseToEntropy(seedPhrase: string): string {
   if (!validateSeedPhrase(seedPhrase)) {
     throw new Error('Invalid seed phrase');
   }
@@ -44,10 +44,10 @@ export function validateSeedPhrase(seedPhrase: string): boolean {
  * Convert a seed phrase to a key pair
  */
 export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
-  const privateKey = seedPhraseToPrivateKey(seedPhrase);
+  const privateKey = seedPhraseToEntropy(seedPhrase);
   const publicKey = getPublicKey(hexToBytes(privateKey));
   const nsec = nip19.nsecEncode(hexToBytes(privateKey));
-  const npub = nip19.npubEncode(hexToBytes(publicKey));
+  const npub = nip19.npubEncode(publicKey);
   
   return {
     privateKey,
@@ -60,25 +60,25 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
 /**
  * Generate a new Nostr key pair with corresponding seed phrase
  */
-export function generateNew(): KeyPairWithSeed {
+export function generateKeyPairWithSeed(): KeyPairWithSeed {
   try {
     // Generate a new private key
     const privateKeyBytes = secp256k1.utils.randomPrivateKey();
-    const privateKeyHex = bytesToHex(privateKeyBytes);
+    const privateKey = bytesToHex(privateKeyBytes);
     
     // Convert to nsec
     const nsec = nip19.nsecEncode(privateKeyBytes);
     
     // Generate public key
-    const publicKeyHex = getPublicKey(privateKeyBytes);
-    const npub = nip19.npubEncode(publicKeyHex);
+    const publicKey = getPublicKey(privateKeyBytes);
+    const npub = nip19.npubEncode(publicKey);
     
     // Convert private key to seed phrase
-    const seedPhrase = bip39.entropyToMnemonic(privateKeyHex);
+    const seedPhrase = bip39.entropyToMnemonic(privateKey);
 
     return {
-      privateKey: privateKeyHex,
-      publicKey: publicKeyHex,
+      privateKey,
+      publicKey,
       nsec,
       npub,
       seedPhrase
@@ -99,12 +99,12 @@ export function fromHex(privateKeyHex: string): KeyPair {
     }
 
     const nsec = nip19.nsecEncode(hexToBytes(privateKeyHex));
-    const publicKeyHex = getPublicKey(hexToBytes(privateKeyHex));
-    const npub = nip19.npubEncode(hexToBytes(publicKeyHex));
+    const publicKey = getPublicKey(hexToBytes(privateKeyHex));
+    const npub = nip19.npubEncode(publicKey);
 
     return {
       privateKey: privateKeyHex,
-      publicKey: publicKeyHex,
+      publicKey,
       nsec,
       npub
     };
