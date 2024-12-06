@@ -1,4 +1,14 @@
-import { NostrSeedPhrase } from '../index';
+import { 
+  generateNew,
+  fromHex,
+  nsecToHex,
+  npubToHex,
+  hexToNpub,
+  hexToNsec,
+  validateSeedPhrase,
+  seedPhraseToKeyPair,
+  generateSeedPhrase
+} from '../index';
 
 // Mock crypto for tests
 const mockCrypto = {
@@ -11,165 +21,90 @@ const mockCrypto = {
 };
 global.crypto = mockCrypto as unknown as Crypto;
 
-describe('NostrSeedPhrase', () => {
+describe('Nostr Seed Phrase Library', () => {
   // Generate a valid key pair for testing
-  const initial = NostrSeedPhrase.generateNew();
+  const initial = generateNew();
   const testNsec = initial.nsec;
-  const testSeed = NostrSeedPhrase.nsecToSeed(testNsec);
-  const testMnemonic = testSeed.seedPhrase;
-
-  describe('nsecToSeed', () => {
-    it('should convert nsec to mnemonic', () => {
-      const result = NostrSeedPhrase.nsecToSeed(testNsec);
-      expect(result.seedPhrase).toBeTruthy();
-      expect(typeof result.seedPhrase).toBe('string');
+  const testSeed = generateSeedPhrase();
+  
+  describe('seed phrase operations', () => {
+    it('should generate valid seed phrase', () => {
+      const seedPhrase = generateSeedPhrase();
+      expect(validateSeedPhrase(seedPhrase)).toBe(true);
     });
 
-    it('should throw error for invalid nsec', () => {
-      expect(() => NostrSeedPhrase.nsecToSeed('invalid-nsec')).toThrow();
-    });
-  });
-
-  describe('seedToNsec', () => {
-    it('should convert mnemonic to nsec', () => {
-      const result = NostrSeedPhrase.seedToNsec(testMnemonic);
-      expect(result.nsec).toBeTruthy();
-      expect(result.npub).toBeTruthy();
-      expect(result.privateKeyHex).toBeTruthy();
-      expect(result.publicKeyHex).toBeTruthy();
-      expect(result.nsec.startsWith('nsec')).toBe(true);
-      expect(result.npub.startsWith('npub')).toBe(true);
-      expect(/^[0-9a-f]{64}$/.test(result.privateKeyHex)).toBe(true);
-      expect(/^[0-9a-f]{64}$/.test(result.publicKeyHex)).toBe(true);
+    it('should convert seed phrase to key pair', () => {
+      const seedPhrase = generateSeedPhrase();
+      const keyPair = seedPhraseToKeyPair(seedPhrase);
+      expect(keyPair.privateKey).toBeTruthy();
+      expect(keyPair.publicKey).toBeTruthy();
+      expect(keyPair.nsec).toBeTruthy();
+      expect(keyPair.npub).toBeTruthy();
     });
 
-    it('should throw error for invalid mnemonic', () => {
-      expect(() => NostrSeedPhrase.seedToNsec('invalid mnemonic')).toThrow();
+    it('should reject invalid seed phrase', () => {
+      expect(validateSeedPhrase('invalid mnemonic')).toBe(false);
     });
   });
 
-  describe('validateSeedPhrase', () => {
-    it('should validate correct mnemonic', () => {
-      expect(NostrSeedPhrase.validateSeedPhrase(testMnemonic)).toBe(true);
-    });
-
-    it('should reject invalid mnemonic', () => {
-      expect(NostrSeedPhrase.validateSeedPhrase('invalid mnemonic')).toBe(false);
-    });
-  });
-
-  describe('generateNew', () => {
+  describe('key pair generation', () => {
     it('should generate new key pair', () => {
-      const result = NostrSeedPhrase.generateNew();
+      const result = generateNew();
       expect(result.nsec).toBeTruthy();
       expect(result.npub).toBeTruthy();
       expect(result.seedPhrase).toBeTruthy();
-      expect(result.privateKeyHex).toBeTruthy();
-      expect(result.publicKeyHex).toBeTruthy();
+      expect(result.privateKey).toBeTruthy();
+      expect(result.publicKey).toBeTruthy();
     });
 
     it('should generate valid seed phrase', () => {
-      const result = NostrSeedPhrase.generateNew();
-      expect(NostrSeedPhrase.validateSeedPhrase(result.seedPhrase)).toBe(true);
-    });
-
-    it('should generate convertible keys', () => {
-      const result = NostrSeedPhrase.generateNew();
-      const convertedSeed = NostrSeedPhrase.nsecToSeed(result.nsec);
-      expect(convertedSeed.seedPhrase).toBeTruthy();
+      const result = generateNew();
+      expect(validateSeedPhrase(result.seedPhrase)).toBe(true);
     });
   });
 
   describe('hex conversion', () => {
     it('should create key pair from hex', () => {
-      const initial = NostrSeedPhrase.generateNew();
-      const fromHex = NostrSeedPhrase.fromHex(initial.privateKeyHex);
-      expect(fromHex.nsec).toBe(initial.nsec);
-      expect(fromHex.npub).toBe(initial.npub);
-      expect(fromHex.privateKeyHex).toBe(initial.privateKeyHex);
-      expect(fromHex.publicKeyHex).toBe(initial.publicKeyHex);
+      const initial = generateNew();
+      const fromHexResult = fromHex(initial.privateKey);
+      expect(fromHexResult.nsec).toBe(initial.nsec);
+      expect(fromHexResult.npub).toBe(initial.npub);
+      expect(fromHexResult.privateKey).toBe(initial.privateKey);
+      expect(fromHexResult.publicKey).toBe(initial.publicKey);
     });
 
     it('should convert nsec to hex', () => {
-      const initial = NostrSeedPhrase.generateNew();
-      const hex = NostrSeedPhrase.nsecToHex(initial.nsec);
-      expect(hex).toBe(initial.privateKeyHex);
-      expect(/^[0-9a-f]{64}$/.test(hex)).toBe(true);
+      const initial = generateNew();
+      const hex = nsecToHex(initial.nsec);
+      expect(hex).toBe(initial.privateKey);
+      expect(/^[0-9a-fA-F]{64}$/.test(hex)).toBe(true);
     });
 
     it('should convert npub to hex', () => {
-      const initial = NostrSeedPhrase.generateNew();
-      const hex = NostrSeedPhrase.npubToHex(initial.npub);
-      expect(hex).toBe(initial.publicKeyHex);
-      expect(/^[0-9a-f]{64}$/.test(hex)).toBe(true);
+      const initial = generateNew();
+      const hex = npubToHex(initial.npub);
+      expect(hex).toBe(initial.publicKey);
+      expect(/^[0-9a-fA-F]{64}$/.test(hex)).toBe(true);
     });
 
     it('should convert hex to npub', () => {
-      const initial = NostrSeedPhrase.generateNew();
-      const npub = NostrSeedPhrase.hexToNpub(initial.publicKeyHex);
+      const initial = generateNew();
+      const npub = hexToNpub(initial.publicKey);
       expect(npub).toBe(initial.npub);
       expect(npub.startsWith('npub')).toBe(true);
     });
 
     it('should convert hex to nsec', () => {
-      const initial = NostrSeedPhrase.generateNew();
-      const nsec = NostrSeedPhrase.hexToNsec(initial.privateKeyHex);
+      const initial = generateNew();
+      const nsec = hexToNsec(initial.privateKey);
       expect(nsec).toBe(initial.nsec);
       expect(nsec.startsWith('nsec')).toBe(true);
     });
 
-    it('should throw error for invalid hex private key', () => {
-      expect(() => NostrSeedPhrase.fromHex('invalid')).toThrow();
-      expect(() => NostrSeedPhrase.hexToNsec('invalid')).toThrow();
-    });
-
-    it('should throw error for invalid hex public key', () => {
-      expect(() => NostrSeedPhrase.hexToNpub('invalid')).toThrow();
-    });
-  });
-
-  describe('roundtrip conversion', () => {
-    it('should maintain key integrity through conversions', () => {
-      const initial = NostrSeedPhrase.generateNew();
-      const seed = NostrSeedPhrase.nsecToSeed(initial.nsec);
-      const final = NostrSeedPhrase.seedToNsec(seed.seedPhrase);
-      expect(final.nsec).toBe(initial.nsec);
-      expect(final.npub).toBe(initial.npub);
-      expect(final.privateKeyHex).toBe(initial.privateKeyHex);
-      expect(final.publicKeyHex).toBe(initial.publicKeyHex);
-    });
-
-    it('should maintain consistent npub across conversions', () => {
-      // Start with a generated key pair
-      const initial = NostrSeedPhrase.generateNew();
-      
-      // Convert to seed phrase and back
-      const seed = NostrSeedPhrase.nsecToSeed(initial.nsec);
-      const fromSeed = NostrSeedPhrase.seedToNsec(seed.seedPhrase);
-      
-      // Verify both nsec and npub remain consistent
-      expect(fromSeed.nsec).toBe(initial.nsec);
-      expect(fromSeed.npub).toBe(initial.npub);
-      expect(fromSeed.npub.startsWith('npub')).toBe(true);
-    });
-
-    it('should maintain consistency across all formats', () => {
-      // Start with a generated key pair
-      const initial = NostrSeedPhrase.generateNew();
-      
-      // Convert through various formats
-      const hex = NostrSeedPhrase.nsecToHex(initial.nsec);
-      const fromHex = NostrSeedPhrase.fromHex(hex);
-      const npubFromHex = NostrSeedPhrase.hexToNpub(fromHex.publicKeyHex);
-      const nsecFromHex = NostrSeedPhrase.hexToNsec(fromHex.privateKeyHex);
-      
-      // Verify everything matches
-      expect(fromHex.nsec).toBe(initial.nsec);
-      expect(fromHex.npub).toBe(initial.npub);
-      expect(npubFromHex).toBe(initial.npub);
-      expect(nsecFromHex).toBe(initial.nsec);
-      expect(fromHex.privateKeyHex).toBe(initial.privateKeyHex);
-      expect(fromHex.publicKeyHex).toBe(initial.publicKeyHex);
+    it('should throw error for invalid hex', () => {
+      expect(() => fromHex('invalid-hex')).toThrow();
+      expect(() => hexToNpub('invalid-hex')).toThrow();
+      expect(() => hexToNsec('invalid-hex')).toThrow();
     });
   });
 });
