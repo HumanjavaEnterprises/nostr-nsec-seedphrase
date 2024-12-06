@@ -24,8 +24,6 @@ global.crypto = mockCrypto as unknown as Crypto;
 describe('Nostr Seed Phrase Library', () => {
   // Generate a valid key pair for testing
   const initial = generateKeyPairWithSeed();
-  const testNsec = initial.nsec;
-  const testSeed = generateSeedPhrase();
   
   describe('seed phrase operations', () => {
     it('should generate valid seed phrase', () => {
