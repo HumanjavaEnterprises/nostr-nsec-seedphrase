@@ -1,5 +1,16 @@
 import { NostrSeedPhrase } from '../index';
 
+// Mock crypto for tests
+const mockCrypto = {
+  getRandomValues: (arr: Uint8Array) => {
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = Math.floor(Math.random() * 256);
+    }
+    return arr;
+  }
+};
+global.crypto = mockCrypto as unknown as Crypto;
+
 describe('NostrSeedPhrase', () => {
   // Generate a valid key pair for testing
   const initial = NostrSeedPhrase.generateNew();
