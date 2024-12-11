@@ -1,6 +1,6 @@
 {
   "name": "nostr-nsec-seedphrase",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A TypeScript library for managing Nostr keys with seed phrases, including event signing, verification, and WebSocket utilities",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vergelevans/nostr-nsec-seedphrase.git"
+    "url": "git+https://github.com/humanjavaenterprises/nostr-nsec-seedphrase.git"
   },
   "keywords": [
     "nostr",
@@ -41,9 +41,9 @@
   "author": "Vergel Evans",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vergelevans/nostr-nsec-seedphrase/issues"
+    "url": "https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/issues"
   },
-  "homepage": "https://github.com/vergelevans/nostr-nsec-seedphrase#readme",
+  "homepage": "https://github.com/humanjavaenterprises/nostr-nsec-seedphrase#readme",
   "dependencies": {
     "@noble/hashes": "^1.3.3",
     "@noble/secp256k1": "^2.0.0",
