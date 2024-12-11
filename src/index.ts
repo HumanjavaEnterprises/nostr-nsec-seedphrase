@@ -305,10 +305,15 @@ export function configureHMAC(): void {
     return h.digest();
   };
 
-  secp256k1.utils.hmacSha256 = hmacFunction;
-  secp256k1.utils.hmacSha256Sync = hmacSyncFunction;
+  // Type assertion to handle the utils property
+  (secp256k1 as any).utils = {
+    ...(secp256k1 as any).utils,
+    hmacSha256: hmacFunction,
+    hmacSha256Sync: hmacSyncFunction
+  };
+  
   logger.debug('Configured HMAC for secp256k1');
-  logger.debug('secp256k1.utils after configuration:', secp256k1.utils);
+  logger.debug('secp256k1.utils after configuration:', (secp256k1 as any).utils);
 }
 
 /**

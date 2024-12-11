@@ -17,12 +17,12 @@ import {
 
 vi.mock('@noble/secp256k1', async () => {
   const utils = {
-    hmacSha256: (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
+    hmacSha256: (_key: Uint8Array, ..._messages: Uint8Array[]): Uint8Array => {
       const result = new Uint8Array(32);
       result.fill(1);
       return result;
     },
-    hmacSha256Sync: (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
+    hmacSha256Sync: (_key: Uint8Array, ..._messages: Uint8Array[]): Uint8Array => {
       const result = new Uint8Array(32);
       result.fill(1);
       return result;
