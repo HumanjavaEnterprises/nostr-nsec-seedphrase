@@ -1,7 +1,9 @@
-import { getPublicKey, nip19 } from 'nostr-tools';
+import { getPublicKey, nip19, getEventHash } from 'nostr-tools';
 import * as secp256k1 from '@noble/secp256k1';
 import * as bip39 from 'bip39';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { sha256 } from '@noble/hashes/sha256';
+import { hmac } from '@noble/hashes/hmac';
 
 export interface KeyPair {
   privateKey: string;
@@ -12,6 +14,16 @@ export interface KeyPair {
 
 export interface KeyPairWithSeed extends KeyPair {
   seedPhrase: string;
+}
+
+export interface NostrEvent {
+  id?: string;
+  pubkey: string;
+  created_at: number;
+  kind: number;
+  tags: string[][];
+  content: string;
+  sig?: string;
 }
 
 /**
@@ -62,18 +74,11 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
  */
 export function generateKeyPairWithSeed(): KeyPairWithSeed {
   try {
-    // Generate a new private key
     const privateKeyBytes = secp256k1.utils.randomPrivateKey();
     const privateKey = bytesToHex(privateKeyBytes);
-    
-    // Convert to nsec
     const nsec = nip19.nsecEncode(privateKeyBytes);
-    
-    // Generate public key
     const publicKey = getPublicKey(privateKeyBytes);
     const npub = nip19.npubEncode(publicKey);
-    
-    // Convert private key to seed phrase
     const seedPhrase = bip39.entropyToMnemonic(privateKey);
 
     return {
@@ -93,7 +98,6 @@ export function generateKeyPairWithSeed(): KeyPairWithSeed {
  */
 export function fromHex(privateKeyHex: string): KeyPair {
   try {
-    // Validate hex format
     if (!/^[0-9a-fA-F]{64}$/.test(privateKeyHex)) {
       throw new Error('Invalid hex private key format. Must be 64 characters of hex.');
     }
@@ -163,4 +167,113 @@ export function hexToNsec(privateKeyHex: string): string {
   } catch (error) {
     throw new Error(`Failed to convert hex to nsec: ${(error as Error).message}`);
   }
+}
+
+/**
+ * Sign a message with a private key
+ */
+export async function signMessage(message: string, privateKey: string): Promise<string> {
+  try {
+    const messageBytes = new TextEncoder().encode(message);
+    const messageHash = sha256(messageBytes);
+    const signature = await secp256k1.sign(messageHash, hexToBytes(privateKey));
+    return signature.toDERHex();
+  } catch (error) {
+    throw new Error(`Failed to sign message: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Verify a message signature
+ */
+export async function verifySignature(
+  message: string,
+  signature: string,
+  publicKey: string
+): Promise<boolean> {
+  try {
+    const messageBytes = new TextEncoder().encode(message);
+    const messageHash = sha256(messageBytes);
+    return secp256k1.verify(signature, messageHash, hexToBytes(publicKey));
+  } catch (error) {
+    throw new Error(`Failed to verify signature: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Sign a Nostr event
+ */
+export function signEvent(event: NostrEvent, privateKey: string): string {
+  try {
+    if (!event.pubkey || !event.created_at || event.kind === undefined || !event.content) {
+      throw new Error('Invalid event: missing required fields');
+    }
+
+    const eventHash = getEventHash(event);
+    const signatureBytes = secp256k1.signSync(
+      hexToBytes(eventHash),
+      hexToBytes(privateKey)
+    );
+    return bytesToHex(signatureBytes);
+  } catch (error) {
+    throw new Error(`Failed to sign event: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Verify a Nostr event signature
+ */
+export function verifyEvent(event: NostrEvent): boolean {
+  try {
+    if (!event.id || !event.pubkey || !event.sig) {
+      throw new Error('Invalid event: missing required fields');
+    }
+
+    const hash = getEventHash(event);
+    if (hash !== event.id) {
+      return false;
+    }
+
+    return secp256k1.verifySync(
+      hexToBytes(event.sig),
+      hexToBytes(hash),
+      hexToBytes(event.pubkey)
+    );
+  } catch (error) {
+    throw new Error(`Failed to verify event: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Configure secp256k1 with HMAC for WebSocket utilities
+ */
+export function configureHMAC(): void {
+  secp256k1.utils.hmacSha256Sync = (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
+    const h = hmac.create(sha256, key);
+    messages.forEach(msg => h.update(msg));
+    return h.digest();
+  };
+}
+
+/**
+ * Create a Nostr event
+ */
+export function createEvent(
+  content: string,
+  kind: number,
+  privateKey: string,
+  tags: string[][] = []
+): NostrEvent {
+  const publicKey = getPublicKey(hexToBytes(privateKey));
+  const event: NostrEvent = {
+    pubkey: publicKey,
+    created_at: Math.floor(Date.now() / 1000),
+    kind,
+    tags,
+    content
+  };
+
+  event.id = getEventHash(event);
+  event.sig = signEvent(event, privateKey);
+  return event;
 }
