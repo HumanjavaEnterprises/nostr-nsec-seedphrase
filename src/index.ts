@@ -1,20 +1,20 @@
-import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from 'bip39';
-import * as secp256k1 from '@noble/secp256k1';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import { sha256 } from '@noble/hashes/sha256';
-import { hmac } from '@noble/hashes/hmac';
-import * as nip19 from 'nostr-tools/nip19';
-import { getPublicKey, getEventHash } from 'nostr-tools/pure';
-import { pino } from 'pino';
+import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from "bip39";
+import * as secp256k1 from "@noble/secp256k1";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha256";
+import { hmac } from "@noble/hashes/hmac";
+import * as nip19 from "nostr-tools/nip19";
+import { getPublicKey, getEventHash } from "nostr-tools/pure";
+import { pino } from "pino";
 
 const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env.LOG_LEVEL || "info",
   transport: {
-    target: 'pino-pretty',
+    target: "pino-pretty",
     options: {
-      colorize: true
-    }
-  }
+      colorize: true,
+    },
+  },
 });
 
 export interface KeyPair {
@@ -55,7 +55,7 @@ export function generateSeedPhrase(): string {
  */
 export function getEntropyFromSeedPhrase(seedPhrase: string): string {
   if (!validateMnemonic(seedPhrase)) {
-    throw new Error('Invalid seed phrase');
+    throw new Error("Invalid seed phrase");
   }
   const entropy = mnemonicToEntropy(seedPhrase);
   return entropy;
@@ -67,10 +67,10 @@ export function getEntropyFromSeedPhrase(seedPhrase: string): string {
 export function validateSeedPhrase(seedPhrase: string): boolean {
   try {
     const isValid = validateMnemonic(seedPhrase);
-    logger.debug({ isValid }, 'Validated seed phrase');
+    logger.debug({ isValid }, "Validated seed phrase");
     return isValid;
   } catch (error) {
-    logger.error('Failed to validate seed phrase:', error);
+    logger.error("Failed to validate seed phrase:", error);
     return false;
   }
 }
@@ -88,16 +88,16 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
     const nsec = nip19.nsecEncode(privateKeyBytes);
     const npub = nip19.npubEncode(publicKey);
 
-    logger.debug('Created key pair from seed phrase');
+    logger.debug("Created key pair from seed phrase");
     return {
       privateKey: privateKeyHex,
       publicKey,
       nsec,
       npub,
-      seedPhrase
+      seedPhrase,
     };
   } catch (error) {
-    logger.error('Failed to create key pair from seed phrase:', error);
+    logger.error("Failed to create key pair from seed phrase:", error);
     throw error;
   }
 }
@@ -108,10 +108,10 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
 export function generateKeyPairWithSeed(): KeyPair {
   try {
     const seedPhrase = generateSeedPhrase();
-    logger.debug('Generated new seed phrase');
+    logger.debug("Generated new seed phrase");
     return seedPhraseToKeyPair(seedPhrase);
   } catch (error) {
-    logger.error('Failed to generate key pair with seed phrase:', error);
+    logger.error("Failed to generate key pair with seed phrase:", error);
     throw error;
   }
 }
@@ -122,7 +122,9 @@ export function generateKeyPairWithSeed(): KeyPair {
 export function fromHex(privateKeyHex: string): KeyPair {
   try {
     if (!/^[0-9a-fA-F]{64}$/.test(privateKeyHex)) {
-      throw new Error('Invalid hex private key format. Must be 64 characters of hex.');
+      throw new Error(
+        "Invalid hex private key format. Must be 64 characters of hex.",
+      );
     }
 
     const privateKeyBytes = hexToBytes(privateKeyHex);
@@ -130,16 +132,16 @@ export function fromHex(privateKeyHex: string): KeyPair {
     const nsec = nip19.nsecEncode(privateKeyBytes);
     const npub = nip19.npubEncode(publicKey);
 
-    logger.debug('Created key pair from hex private key');
+    logger.debug("Created key pair from hex private key");
     return {
       privateKey: privateKeyHex,
       publicKey,
       nsec,
       npub,
-      seedPhrase: ''
+      seedPhrase: "",
     };
   } catch (error) {
-    logger.error('Failed to create key pair from hex:', error);
+    logger.error("Failed to create key pair from hex:", error);
     throw error;
   }
 }
@@ -150,13 +152,13 @@ export function fromHex(privateKeyHex: string): KeyPair {
 export function nsecToHex(nsec: string): string {
   try {
     const { type, data } = nip19.decode(nsec);
-    if (type !== 'nsec') {
-      throw new Error('Invalid nsec format');
+    if (type !== "nsec") {
+      throw new Error("Invalid nsec format");
     }
-    logger.debug('Converted nsec to hex');
+    logger.debug("Converted nsec to hex");
     return bytesToHex(data as Uint8Array);
   } catch (error) {
-    logger.error('Failed to convert nsec to hex:', error);
+    logger.error("Failed to convert nsec to hex:", error);
     throw error;
   }
 }
@@ -167,13 +169,13 @@ export function nsecToHex(nsec: string): string {
 export function npubToHex(npub: string): string {
   try {
     const { type, data } = nip19.decode(npub);
-    if (type !== 'npub') {
-      throw new Error('Invalid npub format');
+    if (type !== "npub") {
+      throw new Error("Invalid npub format");
     }
-    logger.debug('Converted npub to hex');
+    logger.debug("Converted npub to hex");
     return data as string;
   } catch (error) {
-    logger.error('Failed to convert npub to hex:', error);
+    logger.error("Failed to convert npub to hex:", error);
     throw error;
   }
 }
@@ -183,10 +185,10 @@ export function npubToHex(npub: string): string {
  */
 export function hexToNpub(publicKeyHex: string): string {
   try {
-    logger.debug('Converting hex to npub');
+    logger.debug("Converting hex to npub");
     return nip19.npubEncode(publicKeyHex);
   } catch (error) {
-    logger.error('Failed to convert hex to npub:', error);
+    logger.error("Failed to convert hex to npub:", error);
     throw error;
   }
 }
@@ -196,10 +198,10 @@ export function hexToNpub(publicKeyHex: string): string {
  */
 export function hexToNsec(privateKeyHex: string): string {
   try {
-    logger.debug('Converting hex to nsec');
+    logger.debug("Converting hex to nsec");
     return nip19.nsecEncode(hexToBytes(privateKeyHex));
   } catch (error) {
-    logger.error('Failed to convert hex to nsec:', error);
+    logger.error("Failed to convert hex to nsec:", error);
     throw error;
   }
 }
@@ -207,15 +209,18 @@ export function hexToNsec(privateKeyHex: string): string {
 /**
  * Sign a message with a private key
  */
-export async function signMessage(message: string, privateKey: string): Promise<string> {
+export async function signMessage(
+  message: string,
+  privateKey: string,
+): Promise<string> {
   try {
     const messageBytes = new TextEncoder().encode(message);
     const messageHash = sha256(messageBytes);
     const signature = await secp256k1.sign(messageHash, hexToBytes(privateKey));
-    logger.debug('Message signed successfully');
+    logger.debug("Message signed successfully");
     return bytesToHex(signature.toCompactRawBytes());
   } catch (error) {
-    logger.error('Failed to sign message:', error);
+    logger.error("Failed to sign message:", error);
     throw error;
   }
 }
@@ -226,19 +231,19 @@ export async function signMessage(message: string, privateKey: string): Promise<
 export async function verifySignature(
   message: string,
   signature: string,
-  publicKey: string
+  publicKey: string,
 ): Promise<boolean> {
   try {
     const messageBytes = new TextEncoder().encode(message);
     const messageHash = sha256(messageBytes);
-    logger.debug('Verifying message signature');
+    logger.debug("Verifying message signature");
     return await secp256k1.verify(
       hexToBytes(signature),
       messageHash,
-      hexToBytes(publicKey)
+      hexToBytes(publicKey),
     );
   } catch (error) {
-    logger.error('Failed to verify signature:', error);
+    logger.error("Failed to verify signature:", error);
     throw error;
   }
 }
@@ -246,17 +251,20 @@ export async function verifySignature(
 /**
  * Sign a Nostr event
  */
-export async function signEvent(event: UnsignedEvent, privateKey: string): Promise<string> {
+export async function signEvent(
+  event: UnsignedEvent,
+  privateKey: string,
+): Promise<string> {
   try {
     const eventHash = getEventHash(event);
     const signature = await secp256k1.sign(
       hexToBytes(eventHash),
-      hexToBytes(privateKey)
+      hexToBytes(privateKey),
     );
-    logger.debug('Event signed successfully');
+    logger.debug("Event signed successfully");
     return bytesToHex(signature.toCompactRawBytes());
   } catch (error) {
-    logger.error('Failed to sign event:', error);
+    logger.error("Failed to sign event:", error);
     throw error;
   }
 }
@@ -267,24 +275,24 @@ export async function signEvent(event: UnsignedEvent, privateKey: string): Promi
 export async function verifyEvent(event: NostrEvent): Promise<boolean> {
   try {
     if (!event.id || !event.pubkey || !event.sig) {
-      logger.warn('Invalid event: missing required fields');
+      logger.warn("Invalid event: missing required fields");
       return false;
     }
 
     const hash = getEventHash(event);
     if (hash !== event.id) {
-      logger.warn('Event hash mismatch');
+      logger.warn("Event hash mismatch");
       return false;
     }
 
-    logger.debug('Verifying event signature');
+    logger.debug("Verifying event signature");
     return await secp256k1.verify(
       hexToBytes(event.sig),
       hexToBytes(hash),
-      hexToBytes(event.pubkey)
+      hexToBytes(event.pubkey),
     );
   } catch (error) {
-    logger.error('Failed to verify event:', error);
+    logger.error("Failed to verify event:", error);
     throw error;
   }
 }
@@ -293,15 +301,21 @@ export async function verifyEvent(event: NostrEvent): Promise<boolean> {
  * Configure secp256k1 with HMAC for WebSocket utilities
  */
 export function configureHMAC(): void {
-  const hmacFunction = (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
+  const hmacFunction = (
+    key: Uint8Array,
+    ...messages: Uint8Array[]
+  ): Uint8Array => {
     const h = hmac.create(sha256, key);
-    messages.forEach(msg => h.update(msg));
+    messages.forEach((msg) => h.update(msg));
     return h.digest();
   };
 
-  const hmacSyncFunction = (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
+  const hmacSyncFunction = (
+    key: Uint8Array,
+    ...messages: Uint8Array[]
+  ): Uint8Array => {
     const h = hmac.create(sha256, key);
-    messages.forEach(msg => h.update(msg));
+    messages.forEach((msg) => h.update(msg));
     return h.digest();
   };
 
@@ -309,11 +323,14 @@ export function configureHMAC(): void {
   (secp256k1 as any).utils = {
     ...(secp256k1 as any).utils,
     hmacSha256: hmacFunction,
-    hmacSha256Sync: hmacSyncFunction
+    hmacSha256Sync: hmacSyncFunction,
   };
-  
-  logger.debug('Configured HMAC for secp256k1');
-  logger.debug('secp256k1.utils after configuration:', (secp256k1 as any).utils);
+
+  logger.debug("Configured HMAC for secp256k1");
+  logger.debug(
+    "secp256k1.utils after configuration:",
+    (secp256k1 as any).utils,
+  );
 }
 
 /**
@@ -323,25 +340,25 @@ export async function createEvent(
   content: string,
   kind: number,
   privateKey: string,
-  tags: string[][] = []
+  tags: string[][] = [],
 ): Promise<NostrEvent> {
   const publicKey = getPublicKey(hexToBytes(privateKey));
-  
+
   const event: UnsignedEvent = {
     pubkey: publicKey,
     created_at: Math.floor(Date.now() / 1000),
     kind,
     tags,
-    content
+    content,
   };
 
   const id = getEventHash(event);
   const sig = await signEvent(event, privateKey);
 
-  logger.debug('Created new Nostr event');
+  logger.debug("Created new Nostr event");
   return {
     ...event,
     id,
-    sig
+    sig,
   };
 }
