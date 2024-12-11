@@ -1,22 +1,22 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "es2020",
-    "moduleResolution": "node",
+    "target": "ES2020",
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "declaration": true,
     "declarationDir": "./dist",
+    "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]
     },
     "lib": ["es2020", "dom"],
-    "types": ["node", "jest"],
+    "types": ["vitest/globals", "node"],
     "allowJs": true,
     "resolveJsonModule": true
   },

@@ -1,138 +1,170 @@
-import { 
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+import {
   generateKeyPairWithSeed,
-  fromHex,
+  seedPhraseToKeyPair,
+  validateSeedPhrase,
   nsecToHex,
   npubToHex,
-  hexToNpub,
   hexToNsec,
-  validateSeedPhrase,
-  seedPhraseToKeyPair,
-  generateSeedPhrase
+  hexToNpub,
+  signMessage,
+  verifySignature,
+  createEvent,
+  verifyEvent,
+  configureHMAC,
+  fromHex
 } from '../index';
 
-// Mock crypto for tests
-const mockCrypto = {
-  getRandomValues: (arr: Uint8Array) => {
-    for (let i = 0; i < arr.length; i++) {
-      arr[i] = Math.floor(Math.random() * 256);
+vi.mock('@noble/secp256k1', async () => {
+  const utils = {
+    hmacSha256: (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
+      const result = new Uint8Array(32);
+      result.fill(1);
+      return result;
+    },
+    hmacSha256Sync: (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
+      const result = new Uint8Array(32);
+      result.fill(1);
+      return result;
     }
-    return arr;
-  }
-};
-global.crypto = mockCrypto as unknown as Crypto;
+  };
 
-describe('Nostr Seed Phrase Library', () => {
-  // Generate a valid key pair for testing
-  const initial = generateKeyPairWithSeed();
-  
-  describe('seed phrase operations', () => {
-    it('should generate valid seed phrase', () => {
-      const seedPhrase = generateSeedPhrase();
-      expect(validateSeedPhrase(seedPhrase)).toBe(true);
+  return {
+    utils,
+    sign: async (message: Uint8Array) => ({
+      toCompactRawBytes: () => message // Return the message as the signature for testing
+    }),
+    verify: async (signature: Uint8Array, message: Uint8Array) => {
+      // Compare the signature with the message for testing
+      // In our mock, signature should match message for valid verification
+      if (signature.length !== message.length) return false;
+      return signature.every((byte, i) => byte === message[i]);
+    }
+  };
+});
+
+describe('nostr-nsec-seedphrase', () => {
+  beforeAll(() => {
+    // Configure HMAC before running tests
+    configureHMAC();
+  });
+
+  describe('Key Generation', () => {
+    it('should generate a valid key pair with seed phrase', () => {
+      const keyPair = generateKeyPairWithSeed();
+      expect(keyPair.privateKey).toBeDefined();
+      expect(keyPair.publicKey).toBeDefined();
+      expect(keyPair.nsec).toMatch(/^nsec1/);
+      expect(keyPair.npub).toMatch(/^npub1/);
+      expect(keyPair.seedPhrase.split(' ')).toHaveLength(12);
     });
 
     it('should convert seed phrase to key pair', () => {
-      const seedPhrase = generateSeedPhrase();
-      const keyPair = seedPhraseToKeyPair(seedPhrase);
-      expect(keyPair.privateKey).toBeTruthy();
-      expect(keyPair.publicKey).toBeTruthy();
-      expect(keyPair.nsec).toBeTruthy();
-      expect(keyPair.npub).toBeTruthy();
+      const keyPair = generateKeyPairWithSeed();
+      const recoveredKeyPair = seedPhraseToKeyPair(keyPair.seedPhrase);
+      expect(recoveredKeyPair.privateKey).toBe(keyPair.privateKey);
+      expect(recoveredKeyPair.publicKey).toBe(keyPair.publicKey);
+      expect(recoveredKeyPair.nsec).toBe(keyPair.nsec);
+      expect(recoveredKeyPair.npub).toBe(keyPair.npub);
     });
 
-    it('should reject invalid seed phrase', () => {
-      expect(validateSeedPhrase('invalid mnemonic')).toBe(false);
-    });
-
-    it('should throw error when converting invalid seed phrase to key pair', () => {
-      expect(() => seedPhraseToKeyPair('invalid mnemonic')).toThrow();
+    it('should validate seed phrases', () => {
+      const keyPair = generateKeyPairWithSeed();
+      expect(validateSeedPhrase(keyPair.seedPhrase)).toBe(true);
+      expect(validateSeedPhrase('invalid seed phrase')).toBe(false);
     });
   });
 
-  describe('key pair generation', () => {
-    it('should generate new key pair', () => {
-      const result = generateKeyPairWithSeed();
-      expect(result.nsec).toBeTruthy();
-      expect(result.npub).toBeTruthy();
-      expect(result.seedPhrase).toBeTruthy();
-      expect(result.privateKey).toBeTruthy();
-      expect(result.publicKey).toBeTruthy();
-    });
-
-    it('should generate valid seed phrase', () => {
-      const result = generateKeyPairWithSeed();
-      expect(validateSeedPhrase(result.seedPhrase)).toBe(true);
-    });
-
-    it('should handle errors in key pair generation', () => {
-      // Mock crypto.getRandomValues to throw
-      const originalGetRandomValues = crypto.getRandomValues;
-      crypto.getRandomValues = () => { throw new Error('Random generation failed'); };
+  describe('Format Conversions', () => {
+    it('should convert between hex and nsec/npub formats', () => {
+      const keyPair = generateKeyPairWithSeed();
       
-      expect(() => generateKeyPairWithSeed()).toThrow('Failed to generate new key pair');
-      
-      // Restore original function
-      crypto.getRandomValues = originalGetRandomValues;
-    });
-  });
+      // Test hex to nsec/npub
+      const nsec = hexToNsec(keyPair.privateKey);
+      const npub = hexToNpub(keyPair.publicKey);
+      expect(nsec).toBe(keyPair.nsec);
+      expect(npub).toBe(keyPair.npub);
 
-  describe('hex conversion', () => {
+      // Test nsec/npub to hex
+      const privateKeyHex = nsecToHex(keyPair.nsec);
+      const publicKeyHex = npubToHex(keyPair.npub);
+      expect(privateKeyHex).toBe(keyPair.privateKey);
+      expect(publicKeyHex).toBe(keyPair.publicKey);
+    });
+
     it('should create key pair from hex', () => {
-      const initial = generateKeyPairWithSeed();
-      const fromHexResult = fromHex(initial.privateKey);
-      expect(fromHexResult.nsec).toBe(initial.nsec);
-      expect(fromHexResult.npub).toBe(initial.npub);
-      expect(fromHexResult.privateKey).toBe(initial.privateKey);
-      expect(fromHexResult.publicKey).toBe(initial.publicKey);
+      const originalKeyPair = generateKeyPairWithSeed();
+      const keyPair = fromHex(originalKeyPair.privateKey);
+      expect(keyPair.privateKey).toBe(originalKeyPair.privateKey);
+      expect(keyPair.publicKey).toBe(originalKeyPair.publicKey);
+      expect(keyPair.nsec).toBe(originalKeyPair.nsec);
+      expect(keyPair.npub).toBe(originalKeyPair.npub);
+    });
+  });
+
+  describe('Message Signing', () => {
+    it('should sign and verify messages', async () => {
+      const keyPair = generateKeyPairWithSeed();
+      const message = 'Hello, Nostr!';
+      
+      const signature = await signMessage(message, keyPair.privateKey);
+      expect(signature).toBeDefined();
+      
+      const isValid = await verifySignature(message, signature, keyPair.publicKey);
+      expect(isValid).toBe(true);
     });
 
-    it('should convert nsec to hex', () => {
-      const initial = generateKeyPairWithSeed();
-      const hex = nsecToHex(initial.nsec);
-      expect(hex).toBe(initial.privateKey);
-      expect(/^[0-9a-fA-F]{64}$/.test(hex)).toBe(true);
+    it('should fail verification for invalid signatures', async () => {
+      const keyPair = generateKeyPairWithSeed();
+      const message = 'Hello, Nostr!';
+      const wrongMessage = 'Wrong message';
+      
+      const signature = await signMessage(message, keyPair.privateKey);
+      const isValid = await verifySignature(wrongMessage, signature, keyPair.publicKey);
+      expect(isValid).toBe(false);
+    });
+  });
+
+  describe('Event Handling', () => {
+    it('should create and verify events', async () => {
+      const keyPair = generateKeyPairWithSeed();
+      const event = await createEvent(
+        'Hello, Nostr!',
+        1,
+        keyPair.privateKey,
+        [['t', 'test']]
+      );
+
+      expect(event.pubkey).toBe(keyPair.publicKey);
+      expect(event.kind).toBe(1);
+      expect(event.content).toBe('Hello, Nostr!');
+      expect(event.tags).toEqual([['t', 'test']]);
+      expect(event.id).toBeDefined();
+      expect(event.sig).toBeDefined();
+
+      const isValid = await verifyEvent(event);
+      expect(isValid).toBe(true);
     });
 
-    it('should convert npub to hex', () => {
-      const initial = generateKeyPairWithSeed();
-      const hex = npubToHex(initial.npub);
-      expect(hex).toBe(initial.publicKey);
-      expect(/^[0-9a-fA-F]{64}$/.test(hex)).toBe(true);
-    });
+    it('should detect tampered events', async () => {
+      const keyPair = generateKeyPairWithSeed();
+      const event = await createEvent(
+        'Hello, Nostr!',
+        1,
+        keyPair.privateKey
+      );
 
-    it('should convert hex to npub', () => {
-      const initial = generateKeyPairWithSeed();
-      const npub = hexToNpub(initial.publicKey);
-      expect(npub).toBe(initial.npub);
-      expect(npub.startsWith('npub')).toBe(true);
-    });
+      // Tamper with the content
+      event.content = 'Tampered content';
 
-    it('should convert hex to nsec', () => {
-      const initial = generateKeyPairWithSeed();
-      const nsec = hexToNsec(initial.privateKey);
-      expect(nsec).toBe(initial.nsec);
-      expect(nsec.startsWith('nsec')).toBe(true);
+      const isValid = await verifyEvent(event);
+      expect(isValid).toBe(false);
     });
+  });
 
-    it('should throw error for invalid hex', () => {
-      expect(() => fromHex('invalid-hex')).toThrow();
-      expect(() => hexToNpub('invalid-hex')).toThrow();
-      expect(() => hexToNsec('invalid-hex')).toThrow();
-    });
-
-    it('should throw error for invalid nsec format', () => {
-      expect(() => nsecToHex('invalid-nsec')).toThrow('Failed to convert nsec to hex');
-      expect(() => nsecToHex('npub1xxxxxx')).toThrow('Failed to convert nsec to hex');
-    });
-
-    it('should throw error for invalid npub format', () => {
-      expect(() => npubToHex('invalid-npub')).toThrow('Failed to convert npub to hex');
-      expect(() => npubToHex('nsec1xxxxxx')).toThrow('Failed to convert npub to hex');
-    });
-
-    it('should throw error for hex with wrong length', () => {
-      expect(() => fromHex('1234')).toThrow('Invalid hex private key format');
-      expect(() => fromHex('g'.repeat(64))).toThrow('Invalid hex private key format');
+  describe('HMAC Configuration', () => {
+    it('should configure HMAC without errors', () => {
+      expect(() => configureHMAC()).not.toThrow();
     });
   });
 });

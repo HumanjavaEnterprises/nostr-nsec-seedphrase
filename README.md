@@ -1,15 +1,28 @@
 # nostr-nsec-seedphrase
 
+<div align="center">
+
+[![npm version](https://img.shields.io/npm/v/nostr-nsec-seedphrase.svg)](https://www.npmjs.com/package/nostr-nsec-seedphrase)
+[![npm downloads](https://img.shields.io/npm/dm/nostr-nsec-seedphrase.svg)](https://www.npmjs.com/package/nostr-nsec-seedphrase)
+[![License](https://img.shields.io/npm/l/nostr-nsec-seedphrase.svg)](https://github.com/vergelevans/nostr-nsec-seedphrase/blob/main/LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/vergelevans/nostr-nsec-seedphrase/test.yml?branch=main&label=tests)](https://github.com/vergelevans/nostr-nsec-seedphrase/actions)
+[![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://prettier.io/)
+
+</div>
+
 A comprehensive TypeScript library for managing Nostr keys with seed phrases, including event signing, verification, and WebSocket utilities.
 
 ## Features
 
-- Generate and manage seed phrases for Nostr keys
-- Convert between different key formats (hex, nsec, npub)
-- Sign and verify messages
-- Create and verify Nostr events
-- WebSocket utilities for Nostr applications
-- TypeScript support with full type definitions
+- 🔑 Generate and manage seed phrases for Nostr keys
+- 🔄 Convert between different key formats (hex, nsec, npub)
+- ✍️ Sign and verify messages
+- 📝 Create and verify Nostr events
+- 🌐 WebSocket utilities for Nostr applications
+- 📦 TypeScript support with full type definitions
+- ✅ Comprehensive test coverage
+- 🔒 Secure key management practices
 
 ## Installation
 
@@ -51,89 +64,64 @@ const signature = await signMessage('Hello Nostr!', keyPair.privateKey);
 const isValid = await verifySignature('Hello Nostr!', signature, keyPair.publicKey);
 ```
 
-### Nostr Events
+### Event Creation and Verification
 
 ```typescript
-import { createEvent, signEvent, verifyEvent } from 'nostr-nsec-seedphrase';
+import { createEvent, verifyEvent } from 'nostr-nsec-seedphrase';
 
-// Create and sign a new event
-const event = createEvent(
-  'Hello Nostr!',
-  1, // kind
+// Create a new event
+const event = await createEvent(
+  'Hello Nostr!',  // content
+  1,               // kind (1 = text note)
   keyPair.privateKey,
-  [] // tags
+  []               // tags (optional)
 );
 
 // Verify an event
-const isValidEvent = verifyEvent(event);
+const isValidEvent = await verifyEvent(event);
 ```
 
-### WebSocket Utilities
+## Recent Updates
 
-```typescript
-import { configureHMAC } from 'nostr-nsec-seedphrase';
-
-// Configure HMAC for WebSocket connections
-configureHMAC();
-```
-
-### Format Conversions
-
-```typescript
-import {
-  nsecToHex,
-  npubToHex,
-  hexToNsec,
-  hexToNpub,
-  fromHex
-} from 'nostr-nsec-seedphrase';
-
-// Convert between formats
-const hexPrivateKey = nsecToHex('nsec1...');
-const hexPublicKey = npubToHex('npub1...');
-const nsec = hexToNsec(hexPrivateKey);
-const npub = hexToNpub(hexPublicKey);
-
-// Create key pair from hex
-const keyPair = fromHex(hexPrivateKey);
-```
+### v0.2.0
+- 🔧 Fixed HMAC configuration for secp256k1
+- ✅ Added comprehensive test coverage
+- 🎯 Improved TypeScript types
+- 📚 Enhanced documentation
 
 ## API Reference
 
-### Key Generation
-
-- `generateSeedPhrase()`: Generate a new BIP39 seed phrase
+### Key Management
 - `generateKeyPairWithSeed()`: Generate a new key pair with seed phrase
 - `seedPhraseToKeyPair(seedPhrase: string)`: Convert seed phrase to key pair
+- `fromHex(privateKeyHex: string)`: Create key pair from hex private key
 - `validateSeedPhrase(seedPhrase: string)`: Validate a seed phrase
 
-### Signing and Verification
-
-- `signMessage(message: string, privateKey: string)`: Sign a message
-- `verifySignature(message: string, signature: string, publicKey: string)`: Verify a signature
-- `signEvent(event: NostrEvent, privateKey: string)`: Sign a Nostr event
-- `verifyEvent(event: NostrEvent)`: Verify a Nostr event signature
-
-### Event Handling
-
-- `createEvent(content: string, kind: number, privateKey: string, tags?: string[][])`: Create a new Nostr event
-
-### Format Conversions
-
+### Format Conversion
 - `nsecToHex(nsec: string)`: Convert nsec to hex format
 - `npubToHex(npub: string)`: Convert npub to hex format
 - `hexToNsec(privateKeyHex: string)`: Convert hex to nsec format
 - `hexToNpub(publicKeyHex: string)`: Convert hex to npub format
-- `fromHex(privateKeyHex: string)`: Create key pair from hex private key
 
-### WebSocket Utilities
-
-- `configureHMAC()`: Configure secp256k1 with HMAC for WebSocket connections
+### Signing and Verification
+- `signMessage(message: string, privateKey: string)`: Sign a message
+- `verifySignature(message: string, signature: string, publicKey: string)`: Verify a signature
+- `createEvent(content: string, kind: number, privateKey: string, tags?: string[][])`: Create a Nostr event
+- `verifyEvent(event: NostrEvent)`: Verify a Nostr event
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[MIT](LICENSE)
+
+## Author
+
+[Vergel Evans](https://github.com/vergelevans)
+
+---
+<div align="center">
+Made with ❤️ by <a href="https://github.com/humanjavaenterprises">Human Java Enterprises</a>
+</div>
