@@ -30,9 +30,18 @@ A comprehensive TypeScript library for managing Nostr keys with seed phrases, in
 npm install nostr-nsec-seedphrase
 ```
 
-## Usage
+## Getting Started
 
-### Key Generation and Management
+This library provides a comprehensive set of tools for managing Nostr keys with seed phrases. Here's how to get started:
+
+### Prerequisites
+
+- Node.js 16.0.0 or later
+- npm or yarn package manager
+
+### Basic Usage
+
+#### Key Generation and Management
 
 ```typescript
 import { generateKeyPairWithSeed, seedPhraseToKeyPair } from 'nostr-nsec-seedphrase';
@@ -81,14 +90,6 @@ const event = await createEvent(
 const isValidEvent = await verifyEvent(event);
 ```
 
-## Recent Updates
-
-### v0.2.0
-- 🔧 Fixed HMAC configuration for secp256k1
-- ✅ Added comprehensive test coverage
-- 🎯 Improved TypeScript types
-- 📚 Enhanced documentation
-
 ## API Reference
 
 ### Key Management
@@ -109,9 +110,84 @@ const isValidEvent = await verifyEvent(event);
 - `createEvent(content: string, kind: number, privateKey: string, tags?: string[][])`: Create a Nostr event
 - `verifyEvent(event: NostrEvent)`: Verify a Nostr event
 
+## Development
+
+### Setting Up Development Environment
+
+1. Clone the repository
+```bash
+git clone https://github.com/vergelevans/nostr-nsec-seedphrase.git
+cd nostr-nsec-seedphrase
+```
+
+2. Install dependencies
+```bash
+npm install
+```
+
+3. Build the project
+```bash
+npm run build
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Code Style
+
+This project uses Prettier for code formatting. Format your code before committing:
+
+```bash
+npm run format
+```
+
+## Security Considerations
+
+- Always keep your seed phrases and private keys secure
+- Never share your private keys or seed phrases
+- Be cautious when using this library in a browser environment
+- Consider using a hardware wallet for additional security
+- Validate all inputs and handle errors appropriately
+
+## Recent Updates
+
+### v0.4.0
+- 📚 Added comprehensive documentation and examples
+- 📝 Added Code of Conduct
+- 🔍 Enhanced development setup instructions
+- 🛡️ Added security considerations section
+
+### v0.3.0
+- 🔧 Enhanced module resolution for better compatibility
+- ✨ Improved testing infrastructure and mocks
+- 📝 Enhanced TypeScript support and configurations
+- 🔒 Enhanced cryptographic functionality
+- 🎯 Updated ESLint and TypeScript configurations
+
+### v0.2.0
+- 🔧 Fixed HMAC configuration for secp256k1
+- ✅ Added comprehensive test coverage
+- 🎯 Improved TypeScript types
+- 📚 Enhanced documentation
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ## License
 
