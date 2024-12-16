@@ -4,9 +4,9 @@
 
 [![npm version](https://img.shields.io/npm/v/nostr-nsec-seedphrase.svg)](https://www.npmjs.com/package/nostr-nsec-seedphrase)
 [![npm downloads](https://img.shields.io/npm/dm/nostr-nsec-seedphrase.svg)](https://www.npmjs.com/package/nostr-nsec-seedphrase)
-[![License](https://img.shields.io/npm/l/nostr-nsec-seedphrase.svg)](https://github.com/vergelevans/nostr-nsec-seedphrase/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/nostr-nsec-seedphrase.svg)](https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
-[![Test Status](https://img.shields.io/github/actions/workflow/status/vergelevans/nostr-nsec-seedphrase/test.yml?branch=main&label=tests)](https://github.com/vergelevans/nostr-nsec-seedphrase/actions)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/humanjavaenterprises/nostr-nsec-seedphrase/test.yml?branch=main&label=tests)](https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/actions)
 [![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://prettier.io/)
 
 </div>
@@ -168,7 +168,7 @@ const isValidEvent = await verifyEvent(event);
 
 1. Clone the repository
 ```bash
-git clone https://github.com/vergelevans/nostr-nsec-seedphrase.git
+git clone https://github.com/humanjavaenterprises/nostr-nsec-seedphrase.git
 cd nostr-nsec-seedphrase
 ```
 
