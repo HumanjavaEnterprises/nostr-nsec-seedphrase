@@ -13,38 +13,10 @@ import {
   verifyEvent,
   configureHMAC,
   fromHex,
-} from "../index";
+} from "../index.js";
 
-vi.mock("@noble/secp256k1", async () => {
-  const utils = {
-    hmacSha256: (_key: Uint8Array, ..._messages: Uint8Array[]): Uint8Array => {
-      const result = new Uint8Array(32);
-      result.fill(1);
-      return result;
-    },
-    hmacSha256Sync: (
-      _key: Uint8Array,
-      ..._messages: Uint8Array[]
-    ): Uint8Array => {
-      const result = new Uint8Array(32);
-      result.fill(1);
-      return result;
-    },
-  };
-
-  return {
-    utils,
-    sign: async (message: Uint8Array) => ({
-      toCompactRawBytes: () => message, // Return the message as the signature for testing
-    }),
-    verify: async (signature: Uint8Array, message: Uint8Array) => {
-      // Compare the signature with the message for testing
-      // In our mock, signature should match message for valid verification
-      if (signature.length !== message.length) return false;
-      return signature.every((byte, i) => byte === message[i]);
-    },
-  };
-});
+// Mock is automatically picked up from src/__mocks__/@noble/secp256k1.ts
+vi.mock("@noble/secp256k1");
 
 describe("nostr-nsec-seedphrase", () => {
   beforeAll(() => {
