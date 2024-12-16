@@ -11,9 +11,9 @@ We release patches for security vulnerabilities. Which versions are eligible for
 
 ## Reporting a Vulnerability
 
-Please report security vulnerabilities to security@humanjavaenterprises.com.
+Please report security vulnerabilities through GitHub's Security Advisory feature at [https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/security/advisories/new](https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/security/advisories/new).
 
-The team will acknowledge your email within 48 hours, and will send a more detailed response within 72 hours indicating the next steps in handling your report.
+The team will acknowledge your report within 48 hours, and will send a more detailed response within 72 hours indicating the next steps in handling your report.
 
 After the initial reply to your report, the security team will endeavor to keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
 

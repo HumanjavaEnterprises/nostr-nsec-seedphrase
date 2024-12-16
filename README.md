@@ -24,6 +24,58 @@ A comprehensive TypeScript library for managing Nostr keys with seed phrases, in
 - ✅ Comprehensive test coverage
 - 🔒 Secure key management practices
 
+## NIPs Support Status
+
+🟢 Fully implemented 🟡 Partially implemented 🔴 Not implemented
+
+| NIP | Status | Description |
+|-----|--------|-------------|
+| 01 | 🟢 | Basic protocol flow & event signing |
+| 06 | 🟢 | Basic key derivation and event signing |
+| 13 | 🟢 | Proof of Work support |
+| 19 | 🟢 | bech32-encoded entities |
+| 49 | 🟢 | Private Key Generation from Seed Phrases |
+
+### NIP-49 Implementation Details
+
+This package fully implements NIP-49, which specifies the use of BIP-39-style mnemonic seed phrases for generating private keys in the Nostr protocol. Our implementation ensures full compatibility with the NIP-49 specification while providing robust tooling for developers.
+
+#### Key Features & Compliance
+
+1. **Mnemonic Generation & Handling**:
+   - Full BIP-39 compliance for seed phrase generation
+   - Support for multiple languages and word lists
+   - Secure entropy generation for new seed phrases
+
+2. **Standardized Key Derivation**:
+   - Implements the standard derivation path (m/44'/1237'/0'/0/0)
+   - Ensures compatibility with other NIP-49 compliant tools and wallets
+   - Supports custom derivation paths for advanced use cases
+
+3. **Key Format & Encoding**:
+   - Outputs Nostr-compatible `nsec` and `npub` keys
+   - Supports conversion between different key formats
+   - Maintains compatibility with existing Nostr infrastructure
+
+4. **Security & Best Practices**:
+   - Implements secure key generation and storage practices
+   - Provides validation utilities for seed phrases
+   - Follows cryptographic best practices for key management
+
+#### Interoperability
+
+This implementation ensures compatibility with:
+- Nostr wallets implementing NIP-49
+- Key management tools using BIP-39 mnemonics
+- Other Nostr clients and libraries following the specification
+
+#### Validation & Testing
+
+To verify compatibility, the package includes:
+- Comprehensive test suites against NIP-49 specifications
+- Validation against known test vectors
+- Integration tests with common Nostr tools and libraries
+
 ## Installation
 
 ```bash
@@ -199,5 +251,5 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ---
 <div align="center">
-Made with ❤️ by <a href="https://github.com/humanjavaenterprises">Human Java Enterprises</a>
+Made with ❤️ by <a href="https://github.com/humanjavaenterprises">Humanjava Enterprises</a>
 </div>

@@ -51,8 +51,7 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-[conduct@humanjavaenterprises.org](mailto:conduct@humanjavaenterprises.org).
+reported by creating a confidential issue at [https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/issues/new/choose](https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/issues/new/choose) using the "Code of Conduct Violation" template.
 All complaints will be reviewed and investigated promptly and fairly.
 
 ## Enforcement Guidelines
