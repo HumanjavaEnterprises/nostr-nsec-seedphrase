@@ -8,6 +8,9 @@ export default defineConfig({
     testTimeout: 10000,
     pool: 'forks',
     maxConcurrency: 1,
+    mockReset: true,
+    clearMocks: true,
+    restoreMocks: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

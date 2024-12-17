@@ -1,3 +1,5 @@
+nostr-nsec-seedphrase / [Exports](modules.md)
+
 # nostr-nsec-seedphrase
 
 <div align="center">
@@ -142,33 +144,6 @@ const event = await createEvent(
 const isValidEvent = await verifyEvent(event);
 ```
 
-## Key Management Functions
-
-### Public Key Generation
-```typescript
-import { getPublicKey } from 'nostr-nsec-seedphrase';
-
-// Generate public key from private key
-const pubkey = getPublicKey(privateKeyHex);
-```
-
-### NIP-19 Encoding/Decoding
-```typescript
-import { nip19 } from 'nostr-nsec-seedphrase';
-
-// Encode/decode public keys (npub)
-const npub = nip19.npubEncode(pubkeyHex);
-const pubkey = nip19.npubDecode(npub);
-
-// Encode/decode private keys (nsec)
-const nsec = nip19.nsecEncode(privkeyHex);
-const privkey = nip19.nsecDecode(nsec);
-
-// Encode/decode event IDs (note)
-const note = nip19.noteEncode(eventIdHex);
-const eventId = nip19.noteDecode(note);
-```
-
 ## API Reference
 
 ### Key Management
@@ -237,13 +212,6 @@ npm run format
 
 ## Recent Updates
 
-### v0.5.0
-- 🔧 Fixed Bech32 mocking in test suite
-- 🔄 Improved signature verification consistency
-- 🎯 Enhanced key pair generation and validation
-- 🛠️ Updated test infrastructure for better reliability
-- 📦 Streamlined dependency mocking system
-
 ### v0.4.0
 - 📚 Added comprehensive documentation and examples
 - 📝 Added Code of Conduct
@@ -273,11 +241,7 @@ We welcome contributions! Please follow these steps:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-Before contributing:
-- Read our [Code of Conduct](CODE_OF_CONDUCT.md)
-- Check our [Contributing Guidelines](.github/CONTRIBUTING.md)
-- Review our [Security Policy](SECURITY.md)
-- Search [existing issues](https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/issues) before creating a new one
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ## License
 
