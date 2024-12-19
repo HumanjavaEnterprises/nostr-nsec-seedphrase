@@ -20,13 +20,13 @@ function fromWords(words: number[]): number[] {
   return Array.from(data);
 }
 
-function encode(prefix: string, words: number[], limit: number): string {
+function encode(prefix: string, words: number[], _limit: number): string {
   // Simple mock encoding: prefix1<hex>
   const data = Uint8Array.from(words);
   return `${prefix}1${bytesToHex(data)}`;
 }
 
-function decode(str: string, limit?: number): { prefix: string; words: number[] } {
+function decode(str: string, _limit?: number): { prefix: string; words: number[] } {
   // Simple mock decoding: split on '1'
   const [prefix, data] = str.split('1');
   if (!prefix || !data) {

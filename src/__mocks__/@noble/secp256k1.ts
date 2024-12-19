@@ -1,5 +1,6 @@
 // Mock implementation of @noble/secp256k1 for testing
 import { bytesToHex as originalBytesToHex, hexToBytes as originalHexToBytes } from "@noble/hashes/utils";
+import { vi } from 'vitest';
 
 function ensureUint8Array(input: Uint8Array | string): Uint8Array {
   if (input instanceof Uint8Array) return input;
@@ -7,75 +8,93 @@ function ensureUint8Array(input: Uint8Array | string): Uint8Array {
   throw new Error('Input must be Uint8Array or hex string');
 }
 
-function createMockPublicKey(privateKey: Uint8Array): Uint8Array {
-  // Create a deterministic 33-byte compressed public key
-  const mockPubKey = new Uint8Array(33);
-  mockPubKey[0] = 0x02; // Compressed format prefix
-  
-  // Use private key to generate a deterministic public key
-  for (let i = 0; i < 32; i++) {
-    mockPubKey[i + 1] = privateKey[i] ^ 0x02; // XOR with 0x02 to make it different from private key
-  }
-  
-  return mockPubKey;
-}
-
-// Mock point multiplication for public key derivation
-export function getPublicKey(privateKey: Uint8Array | string): Uint8Array {
+// Mock signature creation with unified interface
+const sign = vi.fn((
+  message: Uint8Array | string,
+  privateKey: Uint8Array | string
+): Uint8Array => {
+  const msgBytes = ensureUint8Array(message);
   const privKeyBytes = ensureUint8Array(privateKey);
-  if (privKeyBytes.length !== 32) {
-    throw new Error('Private key must be 32 bytes');
-  }
   
-  return createMockPublicKey(privKeyBytes);
-}
+  // Create a deterministic mock signature
+  const signature = new Uint8Array(64).fill(1);
+  return signature;
+});
 
-// Mock signature creation
-export const schnorr = {
-  sign(message: Uint8Array | string, privateKey: Uint8Array | string): Promise<Uint8Array> {
-    const msgBytes = ensureUint8Array(message);
-    const privKeyBytes = ensureUint8Array(privateKey);
-    const signature = new Uint8Array(64);
-    
-    // Create a deterministic signature
-    for (let i = 0; i < 32; i++) {
-      signature[i] = msgBytes[i % msgBytes.length];
-      signature[i + 32] = privKeyBytes[i];
-    }
-    
-    return Promise.resolve(signature);
-  },
+// Mock point multiplication
+const getPublicKey = vi.fn((privateKey: Uint8Array | string): Uint8Array => {
+  const privKeyBytes = ensureUint8Array(privateKey);
   
-  verify(signature: Uint8Array | string, message: Uint8Array | string, publicKey: Uint8Array | string): Promise<boolean> {
-    return Promise.resolve(true);
+  // Create a deterministic mock public key
+  const publicKey = new Uint8Array(32).fill(2);
+  return publicKey;
+});
+
+// Mock signature verification
+const verify = vi.fn((
+  signature: Uint8Array | string,
+  message: Uint8Array | string,
+  publicKey: Uint8Array | string
+): boolean => {
+  try {
+    const sigBytes = ensureUint8Array(signature);
+    const msgBytes = ensureUint8Array(message);
+    const pubKeyBytes = ensureUint8Array(publicKey);
+    
+    // Always return true for valid input sizes
+    return sigBytes.length === 64 && msgBytes.length === 32 && pubKeyBytes.length === 32;
+  } catch (error) {
+    return false;
   }
+});
+
+// Mock Schnorr signature functions
+const schnorr = {
+  sign: vi.fn((message: Uint8Array | string, privateKey: Uint8Array | string): Uint8Array => {
+    return sign(message, privateKey);
+  }),
+  verify: vi.fn((
+    signature: Uint8Array | string,
+    message: Uint8Array | string,
+    publicKey: Uint8Array | string
+  ): boolean => {
+    return verify(signature, message, publicKey);
+  })
 };
 
-// Mock utility functions
-export const utils = {
+// Export utility functions
+const utils = {
   bytesToHex: originalBytesToHex,
   hexToBytes: originalHexToBytes,
-  
-  isValidPrivateKey(key: Uint8Array | string): boolean {
-    try {
-      const keyBytes = ensureUint8Array(key);
-      return keyBytes.length === 32;
-    } catch {
-      return false;
-    }
-  },
-  
-  randomPrivateKey(): Uint8Array {
-    const privateKey = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      privateKey[i] = Math.floor(Math.random() * 256);
-    }
-    return privateKey;
-  }
+  precompute: vi.fn(() => {}),
+  sha256: vi.fn((message: Uint8Array) => new Uint8Array(32).fill(3)),
+  isValidPrivateKey: vi.fn(() => true),
+  isValidPublicKey: vi.fn(() => true),
+  normPrivateKeyToScalar: vi.fn(() => BigInt(1)),
+  randomPrivateKey: vi.fn(() => new Uint8Array(32).fill(5))
 };
 
+// Export Point class mock
+class Point {
+  constructor(x?: Uint8Array, y?: Uint8Array) {}
+  static BASE = new Point();
+  static fromHex(hex: string): Point {
+    return new Point();
+  }
+  multiply(scalar: bigint | number | string): Point {
+    return new Point();
+  }
+  toRawBytes(): Uint8Array {
+    return new Uint8Array(32).fill(4);
+  }
+}
+
+// Export everything as a default export
 export default {
   getPublicKey,
   schnorr,
-  utils
+  utils,
+  sign,
+  verify,
+  Point
 };

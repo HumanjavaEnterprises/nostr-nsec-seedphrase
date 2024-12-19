@@ -31,10 +31,41 @@ A comprehensive TypeScript library for managing Nostr keys with seed phrases, in
 | NIP | Status | Description |
 |-----|--------|-------------|
 | 01 | 🟢 | Basic protocol flow & event signing |
-| 06 | 🟢 | Basic key derivation and event signing |
-| 13 | 🟢 | Proof of Work support |
+| 04 | 🟢 | Encrypted Direct Messages (Legacy) |
+| 05 | 🟢 | DNS-based Names and Verification |
+| 06 | 🟢 | Basic key derivation from seed phrases |
+| 07 | 🟢 | `window.nostr` capability for browsers |
+| 13 | 🟢 | Proof of Work |
 | 19 | 🟢 | bech32-encoded entities |
-| 49 | 🟢 | Private Key Generation from Seed Phrases |
+| 26 | 🟢 | Delegated Event Signing |
+| 39 | 🟢 | External Identities in Profiles |
+| 44 | 🟢 | Encrypted Direct Messages v2 |
+| 46 | 🟢 | Nostr Connect (Remote Signing) |
+| 47 | 🟢 | Nostr Wallet Connect |
+| 49 | 🟢 | Private Key Encryption |
+
+### Key Management Features
+
+This library provides comprehensive support for Nostr key management through multiple NIPs:
+
+1. **Core Key Operations**
+   - Seed phrase generation and management (NIP-06)
+   - Key format conversion (NIP-19)
+   - Private key encryption (NIP-49)
+
+2. **Secure Communication**
+   - Modern encrypted messaging (NIP-44)
+   - Legacy encryption support (NIP-04)
+
+3. **Advanced Key Management**
+   - Delegated signing capabilities (NIP-26)
+   - Remote signing support (NIP-46)
+   - Wallet connectivity (NIP-47)
+
+4. **Identity & Verification**
+   - DNS-based verification (NIP-05)
+   - Browser integration (NIP-07)
+   - External identity support (NIP-39)
 
 ### NIP-49 Implementation Details
 
@@ -171,23 +202,148 @@ const eventId = nip19.noteDecode(note);
 
 ## API Reference
 
-### Key Management
-- `generateKeyPairWithSeed()`: Generate a new key pair with seed phrase
-- `seedPhraseToKeyPair(seedPhrase: string)`: Convert seed phrase to key pair
-- `fromHex(privateKeyHex: string)`: Create key pair from hex private key
-- `validateSeedPhrase(seedPhrase: string)`: Validate a seed phrase
+### Event Functions
 
-### Format Conversion
-- `nsecToHex(nsec: string)`: Convert nsec to hex format
-- `npubToHex(npub: string)`: Convert npub to hex format
-- `hexToNsec(privateKeyHex: string)`: Convert hex to nsec format
-- `hexToNpub(publicKeyHex: string)`: Convert hex to npub format
+#### `createEvent(content: string, kind: number, privateKey: string, tags?: string[][]): Promise<NostrEvent>`
+Creates and signs a new Nostr event.
+```typescript
+const event = await createEvent(
+  "Hello Nostr!",
+  1, // kind 1 for text note
+  privateKey,
+  [["t", "nostr"]] // optional tags
+);
+```
 
-### Signing and Verification
-- `signMessage(message: string, privateKey: string)`: Sign a message
-- `verifySignature(message: string, signature: string, publicKey: string)`: Verify a signature
-- `createEvent(content: string, kind: number, privateKey: string, tags?: string[][])`: Create a Nostr event
-- `verifyEvent(event: NostrEvent)`: Verify a Nostr event
+#### `signEvent(event: UnsignedEvent, privateKey: string): Promise<string>`
+Signs a Nostr event with a private key.
+```typescript
+const signature = await signEvent(unsignedEvent, privateKey);
+```
+
+#### `verifyEvent(event: NostrEvent): Promise<boolean>`
+Verifies a Nostr event signature.
+```typescript
+const isValid = await verifyEvent(signedEvent);
+```
+
+### Key Management Functions
+
+#### `seedPhraseToPrivateKey(seedPhrase: string): string`
+Converts a BIP39 seed phrase to a private key.
+```typescript
+const privateKey = seedPhraseToPrivateKey(
+  "witch collapse practice feed shame open despair creek road again ice least"
+);
+```
+
+#### `privateKeyToNsec(privateKey: string): string`
+Converts a private key to bech32 nsec format.
+```typescript
+const nsec = privateKeyToNsec(privateKey);
+```
+
+#### `privateKeyToNpub(privateKey: string): string`
+Converts a private key to bech32 npub format.
+```typescript
+const npub = privateKeyToNpub(privateKey);
+```
+
+#### `getPublicKey(privateKey: string): string`
+Derives a public key from a private key.
+```typescript
+const publicKey = getPublicKey(privateKey);
+```
+
+### Format Conversion Functions
+
+#### `hexToNsec(privateKeyHex: string): string`
+Converts a hex private key to bech32 nsec format.
+```typescript
+const nsec = hexToNsec("1234567890abcdef...");
+```
+
+#### `hexToNpub(publicKeyHex: string): string`
+Converts a hex public key to bech32 npub format.
+```typescript
+const npub = hexToNpub("1234567890abcdef...");
+```
+
+#### `nsecToHex(nsec: string): string`
+Converts a bech32 nsec private key to hex format.
+```typescript
+const hex = nsecToHex("nsec1...");
+```
+
+#### `npubToHex(npub: string): string`
+Converts a bech32 npub public key to hex format.
+```typescript
+const hex = npubToHex("npub1...");
+```
+
+### Message Functions
+
+#### `signMessage(message: string, privateKey: string): Promise<string>`
+Signs a message with a private key.
+```typescript
+const signature = await signMessage("Hello Nostr!", privateKey);
+```
+
+#### `verifySignature(message: string, signature: string, publicKey: string): Promise<boolean>`
+Verifies a message signature.
+```typescript
+const isValid = await verifySignature("Hello Nostr!", signature, publicKey);
+```
+
+### Utility Functions
+
+#### `bytesToHex(bytes: Uint8Array): string`
+Converts bytes to a hex string.
+```typescript
+const hex = bytesToHex(new Uint8Array([1, 2, 3]));
+```
+
+#### `hexToBytes(hex: string): Uint8Array`
+Converts a hex string to bytes.
+```typescript
+const bytes = hexToBytes("010203");
+```
+
+## Error Handling
+
+All functions include proper error handling and will throw descriptive errors when:
+- Invalid input formats are provided
+- Key derivation fails
+- Signing or verification fails
+- Conversion between formats fails
+
+Example error handling:
+```typescript
+try {
+  const nsec = hexToNsec(privateKeyHex);
+} catch (error) {
+  console.error("Failed to convert hex to nsec:", error);
+}
+```
+
+## Type Definitions
+
+The library includes comprehensive TypeScript type definitions for all functions and data structures. Key types include:
+
+```typescript
+interface UnsignedEvent {
+  pubkey: string;
+  created_at: number;
+  kind: number;
+  tags: string[][];
+  content: string;
+}
+
+interface NostrEvent extends UnsignedEvent {
+  id: string;
+  sig: string;
+}
+```
 
 ## Development
 
@@ -235,14 +391,35 @@ npm run format
 - Consider using a hardware wallet for additional security
 - Validate all inputs and handle errors appropriately
 
+## Examples
+
+### Cross-App Authorization
+
+One of the most powerful features of this library is its ability to enable secure cross-app authorization. This allows users to:
+- Keep their private keys in a single trusted application
+- Safely authorize other apps to post on their behalf
+- Maintain full control over permissions and approvals
+
+Check out our [Cross-App Authorization Example](docs/examples/cross-app-authorization.md) to see how you can:
+- Build a secure key manager application
+- Implement client-side authorization requests
+- Create a seamless user experience across multiple Nostr apps
+
+This pattern is perfect for building applications like:
+- Identity management apps
+- Multi-app ecosystems
+- Wallet applications
+- Content creation tools
+
 ## Recent Updates
 
-### v0.5.0
+### v0.5.x
 - 🔧 Fixed Bech32 mocking in test suite
 - 🔄 Improved signature verification consistency
 - 🎯 Enhanced key pair generation and validation
 - 🛠️ Updated test infrastructure for better reliability
 - 📦 Streamlined dependency mocking system
+- ➕ Added NIP-19 encoding/decoding functions & NIP-39 support
 
 ### v0.4.0
 - 📚 Added comprehensive documentation and examples

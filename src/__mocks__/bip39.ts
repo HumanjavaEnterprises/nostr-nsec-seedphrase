@@ -1,5 +1,5 @@
 // Mock implementation of bip39 for testing
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { bytesToHex } from "@noble/hashes/utils";
 
 const VALID_SEED_PHRASE = "witch collapse practice feed shame open despair creek road again ice least";
 const VALID_ENTROPY = "000102030405060708090a0b0c0d0e0f";
@@ -38,7 +38,6 @@ export function mnemonicToEntropy(mnemonic: string): string {
   
   // For other valid phrases, generate a deterministic entropy
   console.log("Generating deterministic entropy");
-  const words = mnemonic.split(" ");
   const entropy = new Uint8Array(16); // 16 bytes = 128 bits
   for (let i = 0; i < 16; i++) {
     entropy[i] = (i + 1) % 256; // Simple deterministic pattern

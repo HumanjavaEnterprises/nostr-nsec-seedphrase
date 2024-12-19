@@ -1,6 +1,6 @@
 {
   "name": "nostr-nsec-seedphrase",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A TypeScript library for managing Nostr keys with seed phrases, including event signing, verification, and WebSocket utilities",
   "type": "module",
   "main": "./dist/index.js",
@@ -52,6 +52,7 @@
     "@types/bech32": "^1.1.8",
     "bech32": "^2.0.0",
     "bip39": "^3.1.0",
+    "nostr-crypto-utils": "^0.2.0",
     "nostr-tools": "^2.1.4",
     "pino": "^8.17.2"
   },
