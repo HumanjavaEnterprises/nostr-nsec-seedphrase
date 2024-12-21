@@ -2,7 +2,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import * as secp256k1 from "@noble/secp256k1";
 import { UnsignedEvent } from "../types/events";
 import { toHex, fromHex, utf8Encoder } from "../utils/encoding";
-import { validatePrivateKey } from "../crypto/keys";
+import { validatePrivateKey, validatePublicKey } from "../crypto/keys";
 
 export class SigningError extends Error {
   constructor(message: string) {
@@ -11,64 +11,17 @@ export class SigningError extends Error {
   }
 }
 
-export async function createSignature(
-  message: string | Uint8Array,
-  privateKey: string
-): Promise<string> {
-  try {
-    if (!validatePrivateKey(privateKey)) {
-      throw new Error('Invalid private key');
-    }
-
-    const messageBytes = typeof message === 'string' 
-      ? utf8Encoder.encode(message)
-      : message;
-    
-    const messageHash = sha256(messageBytes);
-    const signatureObj = await secp256k1.sign(messageHash, privateKey);
-    // Convert the signature to Uint8Array format
-    const signatureBytes = new Uint8Array([...signatureObj.toCompactRawBytes(), signatureObj.recovery]);
-    return toHex(signatureBytes);
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new SigningError(`Failed to create signature: ${error.message}`);
-    }
-    throw new SigningError('Failed to create signature: Unknown error');
-  }
-}
-
-export async function verifySignature(
-  message: string | Uint8Array,
-  signature: string,
-  publicKey: string
-): Promise<boolean> {
-  try {
-    const messageBytes = typeof message === 'string'
-      ? utf8Encoder.encode(message)
-      : message;
-    
-    const messageHash = sha256(messageBytes);
-    const signatureBytes = fromHex(signature);
-    const publicKeyBytes = fromHex(publicKey);
-    
-    // Verify the signature
-    return await secp256k1.verify(signatureBytes, messageHash, publicKeyBytes);
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new SigningError(`Failed to verify signature: ${error.message}`);
-    }
-    throw new SigningError('Failed to verify signature: Unknown error');
-  }
-}
+// Initialize secp256k1 with precomputes for better performance
+secp256k1.utils.precompute();
 
 /**
- * Sign a message using Schnorr signature
- * @param message - The message to sign
- * @param privateKey - The private key to sign with
+ * Sign a message using Schnorr signature (Nostr standard)
+ * @param message - The message to sign (hex string)
+ * @param privateKey - The private key to sign with (hex string)
  * @returns The signature as a hex string
  */
 export async function schnorrSign(
-  message: string | Uint8Array,
+  message: string,
   privateKey: string
 ): Promise<string> {
   try {
@@ -76,54 +29,47 @@ export async function schnorrSign(
       throw new Error('Invalid private key');
     }
 
-    // Convert message to bytes if it's a string
-    const messageBytes = typeof message === 'string' ? new TextEncoder().encode(message) : message;
+    const messageBytes = fromHex(message);
+    const privateKeyBytes = fromHex(privateKey);
     
-    // Hash the message
-    const messageHash = sha256(messageBytes);
-    
-    // Sign the hash with schnorr
-    const signatureBytes = await secp256k1.sign(messageHash, privateKey);
-    return toHex(new Uint8Array(signatureBytes.toCompactRawBytes()));
+    const signature = await secp256k1.schnorrSign(messageBytes, privateKeyBytes);
+    return toHex(signature);
   } catch (error) {
     throw new SigningError(`Failed to create Schnorr signature: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
 /**
- * Verify a Schnorr signature
+ * Verify a Schnorr signature (Nostr standard)
  * @param signature - The signature to verify (hex string)
- * @param message - The original message
- * @param publicKey - The public key to verify against
+ * @param message - The original message (hex string)
+ * @param publicKey - The public key to verify against (hex string)
  * @returns True if the signature is valid
  */
 export async function schnorrVerify(
   signature: string,
-  message: string | Uint8Array,
+  message: string,
   publicKey: string
 ): Promise<boolean> {
   try {
-    // Convert message to bytes if it's a string
-    const messageBytes = typeof message === 'string' ? new TextEncoder().encode(message) : message;
-    
-    // Hash the message
-    const messageHash = sha256(messageBytes);
-    
-    // Convert signature and public key to bytes
+    if (!validatePublicKey(publicKey)) {
+      throw new Error('Invalid public key');
+    }
+
     const signatureBytes = fromHex(signature);
+    const messageBytes = fromHex(message);
     const publicKeyBytes = fromHex(publicKey);
-    
-    // Verify the signature
-    return await secp256k1.verify(signatureBytes, messageHash, publicKeyBytes);
-  } catch {
-    return false;
+
+    return await secp256k1.schnorrVerify(signatureBytes, messageBytes, publicKeyBytes);
+  } catch (error) {
+    throw new SigningError(`Failed to verify Schnorr signature: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
 /**
- * Create an event signature using Schnorr signature
+ * Create a signature for a Nostr event
  * @param event - The unsigned event to sign
- * @param privateKey - The private key to sign with
+ * @param privateKey - The private key to sign with (hex string)
  * @returns The signature as a hex string
  */
 export async function createEventSignature(
@@ -131,28 +77,28 @@ export async function createEventSignature(
   privateKey: string
 ): Promise<string> {
   try {
-    if (!validatePrivateKey(privateKey)) {
-      throw new Error('Invalid private key');
-    }
-
-    let messageBytes: Uint8Array;
+    let serializedEvent: string;
+    
     if (typeof event === 'string') {
-      // If event is a string (eventId), convert it to bytes
-      messageBytes = fromHex(event);
+      serializedEvent = event;
     } else {
-      // If event is an UnsignedEvent, serialize it
-      const serializedEvent = JSON.stringify([
+      // Serialize the event according to Nostr spec
+      const serializedArray = [
         0,
         event.pubkey,
         event.created_at,
         event.kind,
         event.tags,
         event.content
-      ]);
-      messageBytes = utf8Encoder.encode(serializedEvent);
+      ];
+      serializedEvent = JSON.stringify(serializedArray);
     }
+
+    // Create SHA256 hash of the serialized event
+    const eventHash = sha256(utf8Encoder.encode(serializedEvent));
     
-    return await schnorrSign(messageBytes, privateKey);
+    // Sign the hash using Schnorr
+    return await schnorrSign(toHex(eventHash), privateKey);
   } catch (error) {
     throw new SigningError(`Failed to create event signature: ${error instanceof Error ? error.message : 'unknown error'}`);
   }

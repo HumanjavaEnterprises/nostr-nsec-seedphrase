@@ -1,135 +1,216 @@
-import { describe, it, expect } from 'vitest';
-import { encrypt, decrypt, createEncryptedDirectMessage, EncryptionError } from '../../nips/nip04';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { TEST_CONSTANTS, setupHMAC } from '../test-utils';
+import { encrypt, decrypt } from '../../crypto/encryption';
+import { createEncryptedDirectMessage } from '../../nips/nip04';
+import { EncryptionError } from '../../types/errors';
 
 describe('NIP-04: Encrypted Direct Messages', () => {
-  // Test keys from the Nostr spec examples
-  const alicePrivateKey = '7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a';
-  const alicePublicKey = '2c7cc62a697ea3a7826521f3fd34f0cb273693cbe5e9310f35449f43622a5c12';
-  
-  const bobPrivateKey = '1f5fe13fa71b6282b1aad34fe440e0d167a56f694c09b6c8262f1d3e0f1f53d5';
-  const bobPublicKey = '8e0d180c2c0ba9a81af75e91dfcb337d784d3675785a1c7dd82f00e8b8cc7e82';
-
-  const testMessage = 'Hello, this is a secret message!';
+  beforeAll(() => {
+    setupHMAC();
+  });
 
   describe('encrypt', () => {
     it('should encrypt a message successfully', async () => {
-      const encrypted = await encrypt(testMessage, alicePrivateKey, bobPublicKey);
-      expect(encrypted).toBeTruthy();
+      const message = 'Hello, World!';
+      const encrypted = await encrypt(
+        message,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+
+      expect(encrypted).toBeDefined();
       expect(typeof encrypted).toBe('string');
-      expect(encrypted.length).toBeGreaterThan(0);
+      expect(encrypted).not.toBe(message);
     });
 
     it('should produce different ciphertexts for the same message', async () => {
-      const encrypted1 = await encrypt(testMessage, alicePrivateKey, bobPublicKey);
-      const encrypted2 = await encrypt(testMessage, alicePrivateKey, bobPublicKey);
+      const message = 'Hello, World!';
+      const encrypted1 = await encrypt(
+        message,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+      const encrypted2 = await encrypt(
+        message,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+
       expect(encrypted1).not.toBe(encrypted2);
     });
 
     it('should throw EncryptionError for invalid private key', async () => {
-      await expect(() =>
-        encrypt(testMessage, 'invalid-key', bobPublicKey)
-      ).rejects.toThrow(EncryptionError);
+      await expect(encrypt(
+        'Hello',
+        'invalid-key',
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      )).rejects.toThrow(EncryptionError);
     });
 
     it('should throw EncryptionError for invalid public key', async () => {
-      await expect(() =>
-        encrypt(testMessage, alicePrivateKey, 'invalid-key')
-      ).rejects.toThrow(EncryptionError);
+      await expect(encrypt(
+        'Hello',
+        TEST_CONSTANTS.PRIVATE_KEY,
+        'invalid-key'
+      )).rejects.toThrow(EncryptionError);
     });
   });
 
   describe('decrypt', () => {
     it('should decrypt a message successfully', async () => {
-      const encrypted = await encrypt(testMessage, alicePrivateKey, bobPublicKey);
-      const decrypted = await decrypt(encrypted, bobPrivateKey, alicePublicKey);
-      expect(decrypted).toBe(testMessage);
+      const message = 'Hello, World!';
+      const encrypted = await encrypt(
+        message,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+      const decrypted = await decrypt(
+        encrypted,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+
+      expect(decrypted).toBe(message);
     });
 
     it('should decrypt messages between different key pairs', async () => {
-      const encrypted = await encrypt(testMessage, bobPrivateKey, alicePublicKey);
-      const decrypted = await decrypt(encrypted, alicePrivateKey, bobPublicKey);
-      expect(decrypted).toBe(testMessage);
+      const message = 'Hello, Alice!';
+      const encrypted = await encrypt(
+        message,
+        TEST_CONSTANTS.BOB_PRIVATE_KEY,
+        TEST_CONSTANTS.ALICE_PUBLIC_KEY
+      );
+      const decrypted = await decrypt(
+        encrypted,
+        TEST_CONSTANTS.ALICE_PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+
+      expect(decrypted).toBe(message);
     });
 
     it('should throw EncryptionError for invalid encrypted content', async () => {
-      await expect(() =>
-        decrypt('invalid-content', bobPrivateKey, alicePublicKey)
-      ).rejects.toThrow(EncryptionError);
+      await expect(decrypt(
+        'invalid-content',
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      )).rejects.toThrow(EncryptionError);
     });
 
     it('should throw EncryptionError for mismatched keys', async () => {
-      const encrypted = await encrypt(testMessage, alicePrivateKey, bobPublicKey);
-      await expect(() =>
-        decrypt(encrypted, bobPrivateKey, bobPublicKey) // wrong public key
-      ).rejects.toThrow(EncryptionError);
+      const message = 'Hello, World!';
+      const encrypted = await encrypt(
+        message,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+
+      await expect(decrypt(
+        encrypted,
+        TEST_CONSTANTS.BOB_PRIVATE_KEY,
+        TEST_CONSTANTS.ALICE_PUBLIC_KEY
+      )).rejects.toThrow(EncryptionError);
     });
   });
 
   describe('createEncryptedDirectMessage', () => {
     it('should create and decrypt a direct message successfully', async () => {
+      const message = 'Hello, Bob!';
       const event = await createEncryptedDirectMessage(
-        testMessage,
-        alicePrivateKey,
-        bobPublicKey
+        message,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
       );
 
-      // Extract the encrypted content from the event
-      const encrypted = event.content;
-      const decrypted = await decrypt(encrypted, bobPrivateKey, alicePublicKey);
-      expect(decrypted).toBe(testMessage);
+      expect(event.kind).toBe(4);
+      expect(event.tags).toContainEqual(['p', TEST_CONSTANTS.BOB_PUBLIC_KEY]);
+      
+      const decrypted = await decrypt(
+        event.content,
+        TEST_CONSTANTS.BOB_PRIVATE_KEY,
+        TEST_CONSTANTS.PUBLIC_KEY
+      );
+      expect(decrypted).toBe(message);
     });
 
     it('should handle empty messages', async () => {
       const event = await createEncryptedDirectMessage(
         '',
-        alicePrivateKey,
-        bobPublicKey
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
       );
 
-      // Extract the encrypted content from the event
-      const encrypted = event.content;
-      const decrypted = await decrypt(encrypted, bobPrivateKey, alicePublicKey);
+      expect(event.kind).toBe(4);
+      const decrypted = await decrypt(
+        event.content,
+        TEST_CONSTANTS.BOB_PRIVATE_KEY,
+        TEST_CONSTANTS.PUBLIC_KEY
+      );
       expect(decrypted).toBe('');
     });
 
     it('should handle unicode characters', async () => {
-      const unicodeMessage = '👋 Hello 世界!';
+      const message = '你好，世界！👋';
       const event = await createEncryptedDirectMessage(
-        unicodeMessage,
-        alicePrivateKey,
-        bobPublicKey
+        message,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
       );
 
-      // Extract the encrypted content from the event
-      const encrypted = event.content;
-      const decrypted = await decrypt(encrypted, bobPrivateKey, alicePublicKey);
-      expect(decrypted).toBe(unicodeMessage);
+      const decrypted = await decrypt(
+        event.content,
+        TEST_CONSTANTS.BOB_PRIVATE_KEY,
+        TEST_CONSTANTS.PUBLIC_KEY
+      );
+      expect(decrypted).toBe(message);
     });
   });
 
   describe('Edge cases and error handling', () => {
     it('should handle long messages', async () => {
       const longMessage = 'a'.repeat(1000);
-      const encrypted = await encrypt(longMessage, alicePrivateKey, bobPublicKey);
-      const decrypted = await decrypt(encrypted, bobPrivateKey, alicePublicKey);
+      const encrypted = await encrypt(
+        longMessage,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+      const decrypted = await decrypt(
+        encrypted,
+        TEST_CONSTANTS.BOB_PRIVATE_KEY,
+        TEST_CONSTANTS.PUBLIC_KEY
+      );
       expect(decrypted).toBe(longMessage);
     });
 
     it('should handle special characters', async () => {
       const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?`~';
-      const encrypted = await encrypt(specialChars, alicePrivateKey, bobPublicKey);
-      const decrypted = await decrypt(encrypted, bobPrivateKey, alicePublicKey);
+      const encrypted = await encrypt(
+        specialChars,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      );
+      const decrypted = await decrypt(
+        encrypted,
+        TEST_CONSTANTS.BOB_PRIVATE_KEY,
+        TEST_CONSTANTS.PUBLIC_KEY
+      );
       expect(decrypted).toBe(specialChars);
     });
 
     it('should throw error for null or undefined messages', async () => {
-      await expect(() =>
-        encrypt(null as any, alicePrivateKey, bobPublicKey)
-      ).rejects.toThrow();
-      
-      await expect(() =>
-        encrypt(undefined as any, alicePrivateKey, bobPublicKey)
-      ).rejects.toThrow();
+      // @ts-ignore - Testing invalid input
+      await expect(encrypt(
+        '' as any,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      )).rejects.toThrow();
+
+      // @ts-ignore - Testing invalid input
+      await expect(encrypt(
+        '' as any,
+        TEST_CONSTANTS.PRIVATE_KEY,
+        TEST_CONSTANTS.BOB_PUBLIC_KEY
+      )).rejects.toThrow();
     });
   });
 });

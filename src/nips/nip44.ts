@@ -1,77 +1,84 @@
 import { randomBytes } from '@noble/hashes/utils';
 import { xchacha20poly1305 } from '@noble/ciphers/chacha';
-import { sha256 } from '@noble/hashes/sha256';
-import { getSharedSecret } from '../crypto/keys';
-import { encryptWithPassword, decryptWithPassword, deriveKey } from '../crypto/encryption';
-
-const NONCE_SIZE = 24;
-const AUTH_TAG_SIZE = 16;
-const VERSION_SIZE = 1;
-const HEADER_SIZE = VERSION_SIZE + NONCE_SIZE;
+import { bytesToHex } from '@noble/hashes/utils';
+import { secp256k1 } from '@noble/curves/secp256k1';
+import { deriveKey } from '../crypto/encryption';
+import { encrypt as encryptMessage, decrypt as decryptMessage } from '../crypto/encryption';
+import { encryptWithPassword, decryptWithPassword } from '../crypto/encryption';
+import { validatePrivateKey, validatePublicKey } from '../crypto/keys';
+import { toCompressed, toRawX } from '../crypto/key-transforms';
 
 /**
- * Encrypt a message using NIP-44 (v2 encrypted DMs)
+ * NIP-44: Encrypted Direct Messages v2
+ * @see https://github.com/nostr-protocol/nips/blob/master/44.md
  */
-export function encrypt(
+
+/**
+ * Generate a random 24-byte nonce
+ */
+function generateNonce(): Uint8Array {
+  return randomBytes(24);
+}
+
+/**
+ * Derive a shared secret for encryption/decryption
+ */
+function deriveSharedSecret(privateKey: string, publicKey: string): Uint8Array {
+  // Validate keys
+  if (!validatePrivateKey(privateKey)) {
+    throw new Error('Invalid private key');
+  }
+  if (!validatePublicKey(publicKey)) {
+    throw new Error('Invalid public key');
+  }
+
+  // Convert public key to compressed format and get raw x-coordinate
+  const compressedPubKey = bytesToHex(toCompressed(publicKey));
+  const rawPubKey = toRawX(compressedPubKey);
+
+  const sharedPoint = secp256k1.getSharedSecret(privateKey, rawPubKey);
+  // Ensure proper alignment by creating a new array
+  const result = new Uint8Array(32);
+  result.set(sharedPoint.slice(1));
+  return result;
+}
+
+/**
+ * Encrypt a message using NIP-44
+ */
+export async function encrypt(
   plaintext: string,
   privateKey: string,
   publicKey: string
-): string {
-  // Generate a random nonce
-  const nonce = randomBytes(NONCE_SIZE);
-  
-  // Get shared secret
-  const sharedSecret = getSharedSecret(privateKey, publicKey);
-  
-  // Convert plaintext to Uint8Array
-  const plaintextBytes = new TextEncoder().encode(plaintext);
-  
-  // Encrypt using XChaCha20-Poly1305
-  const cipher = xchacha20poly1305(sharedSecret, nonce);
-  const ciphertext = cipher.encrypt(plaintextBytes);
-  
-  // Combine version byte, nonce, and ciphertext
-  const message = new Uint8Array(HEADER_SIZE + ciphertext.length);
-  message[0] = 2;  // version 2
-  message.set(nonce, VERSION_SIZE);
-  message.set(ciphertext, HEADER_SIZE);
-  
-  return Buffer.from(message).toString('base64');
+): Promise<string> {
+  try {
+    // Convert public key to compressed format
+    const compressedPubKey = bytesToHex(toCompressed(publicKey));
+    return await encryptMessage(plaintext, privateKey, compressedPubKey);
+  } catch (error: any) {
+    throw new Error(`NIP-44 encryption failed: ${error.message}`);
+  }
 }
 
 /**
  * Decrypt a message using NIP-44
  */
-export function decrypt(
-  encryptedMessage: string,
+export async function decrypt(
+  message: string,
   privateKey: string,
   publicKey: string
-): string {
-  // Decode base64 message
-  const message = Buffer.from(encryptedMessage, 'base64');
-  
-  // Extract version, nonce, and ciphertext
-  const version = message[0];
-  if (version !== 2) {
-    throw new Error(`Unsupported version: ${version}`);
+): Promise<string> {
+  try {
+    // Convert public key to compressed format
+    const compressedPubKey = bytesToHex(toCompressed(publicKey));
+    return await decryptMessage(message, privateKey, compressedPubKey);
+  } catch (error: any) {
+    throw new Error(`NIP-44 decryption failed: ${error.message}`);
   }
-  
-  const nonce = message.slice(VERSION_SIZE, HEADER_SIZE);
-  const ciphertext = message.slice(HEADER_SIZE);
-  
-  // Get shared secret
-  const sharedSecret = getSharedSecret(privateKey, publicKey);
-  
-  // Decrypt using XChaCha20-Poly1305
-  const cipher = xchacha20poly1305(sharedSecret, nonce);
-  const plaintext = cipher.decrypt(ciphertext);
-  
-  return new TextDecoder().decode(plaintext);
 }
 
 // Re-export password-based encryption functions
-export { 
-  encryptWithPassword, 
-  decryptWithPassword,
-  deriveKey 
-} from '../crypto/encryption';
+export {
+  encryptWithPassword,
+  decryptWithPassword
+};

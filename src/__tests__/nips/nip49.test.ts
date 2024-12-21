@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { mockSecp256k1, mockBech32, TEST_CONSTANTS } from '../test-utils';
-import {
+import { describe, it, expect, beforeAll } from 'vitest';
+import { TEST_CONSTANTS, setupHMAC } from '../test-utils';
+import { 
   encryptPrivateKey,
   decryptPrivateKey,
   validateEncryptedPrivateKey,
@@ -9,11 +9,11 @@ import {
   DEFAULT_SCRYPT_PARAMS
 } from '../../nips/nip49';
 
-// Setup mocks
-mockSecp256k1();
-mockBech32();
-
 describe('NIP-49: Private Key Encryption', () => {
+  beforeAll(() => {
+    setupHMAC();
+  });
+
   const testPrivateKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
   const testPassword = 'test-password';
 

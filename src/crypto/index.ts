@@ -3,11 +3,38 @@ export {
     validatePrivateKey,
     validatePublicKey,
     KeyError
-  } from './keys';
+} from './keys';
   
-  export {
-    createSignature,
-    verifySignature,
+export {
+    schnorrSign as createSignature,
+    schnorrVerify as verifySignature,
     createEventSignature,
     SigningError
-  } from './signing';
+} from './signing';
+
+export {
+    encryptSeedPhrase,
+    decryptSeedPhrase,
+    validateSeedWords,
+    seedWordsToPrivateKey,
+    formatSeedPhrase,
+    parseSeedPhrase,
+    SeedError
+} from './seed';
+
+export {
+    countLeadingZeroes,
+    countLeadingZeroBits,
+    calculateEventId
+} from './hashing';
+
+// Crypto utilities
+export {
+    crypto,
+    bytesToHex,
+    hexToBytes,
+    sha256,
+    getRandomBytes,
+    generatePrivateKey,
+    derivePublicKey
+} from './utils';

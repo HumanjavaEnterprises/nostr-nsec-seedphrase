@@ -1,10 +1,13 @@
-import { getPublicKey } from './keys';
+import { sha256 } from "@noble/hashes/sha256";
+import * as secp256k1 from "@noble/secp256k1";
+import { chacha20, chacha20poly1305 } from "@noble/ciphers/chacha";
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { validatePrivateKey, validatePublicKey } from "./keys";
 import { randomBytes } from '@noble/hashes/utils';
-import * as secp256k1 from '@noble/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
-import { toHex, fromHex } from '../utils/encoding';
-import { webcrypto } from 'node:crypto';
-const crypto = webcrypto;
+import { hmac } from '@noble/hashes/hmac';
+import { getPublicKey } from './keys';
+import { pbkdf2 } from '@noble/hashes/pbkdf2';
+import { xchacha20poly1305 } from '@noble/ciphers/chacha';
 
 export class EncryptionError extends Error {
   constructor(message: string) {
@@ -14,11 +17,7 @@ export class EncryptionError extends Error {
 }
 
 /**
- * Encrypt a message using shared secret
- * @param message - The message to encrypt
- * @param privateKey - The sender's private key
- * @param publicKey - The recipient's public key
- * @returns The encrypted message as a string
+ * Encrypt a message using shared secret derived from ECDH
  */
 export async function encrypt(
   message: string,
@@ -26,48 +25,47 @@ export async function encrypt(
   publicKey: string
 ): Promise<string> {
   try {
-    // Generate 32 bytes of random data for the initialization vector
-    const iv = randomBytes(16);  // AES-CBC requires exactly 16 bytes
+    if (!message || !privateKey || !publicKey) {
+      throw new Error('Missing required parameters');
+    }
 
-    // Derive shared point and hash it for the encryption key
-    const sharedPoint = secp256k1.getSharedSecret(privateKey, '02' + publicKey);
-    const sharedX = sharedPoint.slice(1, 33);  // Remove prefix byte
-    const encryptionKey = sha256(sharedX);
+    // Validate keys
+    if (!validatePrivateKey(privateKey)) {
+      throw new Error('Invalid private key');
+    }
+    if (!validatePublicKey(publicKey)) {
+      throw new Error('Invalid public key');
+    }
 
-    // Import the key for use with WebCrypto
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encryptionKey,
-      { name: 'AES-CBC', length: 256 },
-      false,
-      ['encrypt']
-    );
-
-    // Encrypt the message
-    const encodedMessage = new TextEncoder().encode(message);
-    const ciphertext = await crypto.subtle.encrypt(
-      { name: 'AES-CBC', iv },
-      key,
-      encodedMessage
-    );
-
-    // Combine IV and ciphertext and encode as base64
-    const combined = new Uint8Array(iv.length + ciphertext.byteLength);
-    combined.set(iv);
-    combined.set(new Uint8Array(ciphertext), iv.length);
+    // Convert keys to proper format
+    const privKeyBytes = hexToBytes(privateKey);
+    const pubKeyBytes = hexToBytes(publicKey);
     
-    return Buffer.from(combined).toString('base64');
+    // Compute shared secret using ECDH
+    const sharedPoint = secp256k1.getSharedSecret(privKeyBytes, pubKeyBytes);
+    const sharedSecret = sha256(sharedPoint.slice(1));
+    
+    // Generate random IV
+    const iv = randomBytes(16);
+    
+    // Encrypt the message
+    const messageBytes = new TextEncoder().encode(message);
+    const cipher = chacha20poly1305(sharedSecret, iv);
+    const ciphertext = cipher.encrypt(messageBytes);
+    
+    // Combine IV and ciphertext
+    const combined = new Uint8Array(iv.length + ciphertext.length);
+    combined.set(iv);
+    combined.set(ciphertext, iv.length);
+    
+    return bytesToHex(combined);
   } catch (error) {
     throw new EncryptionError(`Failed to encrypt message: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
 /**
- * Decrypt a message using shared secret
- * @param encrypted - The encrypted message
- * @param privateKey - The recipient's private key
- * @param publicKey - The sender's public key
- * @returns The decrypted message
+ * Decrypt a message using shared secret derived from ECDH
  */
 export async function decrypt(
   encrypted: string,
@@ -75,33 +73,37 @@ export async function decrypt(
   publicKey: string
 ): Promise<string> {
   try {
-    // Decode the combined IV and ciphertext from base64
-    const combined = Buffer.from(encrypted, 'base64');
-    
-    // Split IV and ciphertext
-    const iv = combined.slice(0, 16);
-    const ciphertext = combined.slice(16);
+    if (!encrypted || !privateKey || !publicKey) {
+      throw new Error('Missing required parameters');
+    }
 
-    // Derive shared point and hash it for the decryption key
-    const sharedPoint = secp256k1.getSharedSecret(privateKey, '02' + publicKey);
-    const sharedX = sharedPoint.slice(1, 33);  // Remove prefix byte
-    const decryptionKey = sha256(sharedX);
+    // Validate keys
+    if (!validatePrivateKey(privateKey)) {
+      throw new Error('Invalid private key');
+    }
+    if (!validatePublicKey(publicKey)) {
+      throw new Error('Invalid public key');
+    }
 
-    // Import the key for use with WebCrypto
-    const key = await crypto.subtle.importKey(
-      'raw',
-      decryptionKey,
-      { name: 'AES-CBC', length: 256 },
-      false,
-      ['decrypt']
-    );
+    // Convert keys and encrypted data to bytes
+    const privKeyBytes = hexToBytes(privateKey);
+    const pubKeyBytes = hexToBytes(publicKey);
+    const encryptedBytes = hexToBytes(encrypted);
+
+    // Extract IV and ciphertext
+    if (encryptedBytes.length < 16) {
+      throw new Error('Invalid encrypted data');
+    }
+    const iv = encryptedBytes.slice(0, 16);
+    const ciphertext = encryptedBytes.slice(16);
+
+    // Compute shared secret using ECDH
+    const sharedPoint = secp256k1.getSharedSecret(privKeyBytes, pubKeyBytes);
+    const sharedSecret = sha256(sharedPoint.slice(1));
 
     // Decrypt the message
-    const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-CBC', iv },
-      key,
-      ciphertext
-    );
+    const cipher = chacha20poly1305(sharedSecret, iv);
+    const decrypted = cipher.decrypt(ciphertext);
 
     return new TextDecoder().decode(decrypted);
   } catch (error) {
@@ -121,113 +123,65 @@ export async function createEncryptedMessage(
   privateKey: string,
   recipientPubKey: string
 ): Promise<string> {
-  const senderPubKey = getPublicKey(privateKey);
+  const _senderPubKey = getPublicKey(privateKey);
   return await encrypt(content, privateKey, recipientPubKey);
 }
 
 /**
- * Encrypt sensitive data with a password
- * @param data - The sensitive data to encrypt
- * @param password - Password to encrypt with
- * @returns Encrypted data in base64
+ * Derive an encryption key from a password using PBKDF2
  */
-export async function encryptWithPassword(data: string, password: string): Promise<string> {
-  const { key, salt } = await deriveKey(password);
-  const iv = randomBytes(16);  // AES-CBC requires 16 bytes IV
-  
-  // Import the key for use with WebCrypto
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    key,
-    { name: 'AES-CBC', length: 256 },
-    false,
-    ['encrypt']
-  );
-
-  // Encrypt the data
-  const plaintext = new TextEncoder().encode(data);
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-CBC', iv },
-    cryptoKey,
-    plaintext
-  );
-  
-  // Combine salt, IV, and ciphertext
-  const combined = new Uint8Array(salt.length + iv.length + ciphertext.byteLength);
-  combined.set(salt);
-  combined.set(iv, salt.length);
-  combined.set(new Uint8Array(ciphertext), salt.length + iv.length);
-  
-  return Buffer.from(combined).toString('base64');
-}
-
-/**
- * Decrypt sensitive data with a password
- * @param encryptedData - The encrypted data in base64
- * @param password - Password to decrypt with
- * @returns Decrypted data
- */
-export async function decryptWithPassword(encryptedData: string, password: string): Promise<string> {
-  const combined = Buffer.from(encryptedData, 'base64');
-  
-  // Extract salt, IV, and ciphertext
-  const salt = combined.slice(0, 16);
-  const iv = combined.slice(16, 32);
-  const ciphertext = combined.slice(32);
-  
-  const { key } = await deriveKey(password, salt);
-  
-  // Import the key for use with WebCrypto
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    key,
-    { name: 'AES-CBC', length: 256 },
-    false,
-    ['decrypt']
-  );
-  
-  try {
-    const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-CBC', iv },
-      cryptoKey,
-      ciphertext
-    );
-    return new TextDecoder().decode(decrypted);
-  } catch (error) {
-    throw new EncryptionError(`Failed to decrypt data: ${error instanceof Error ? error.message : 'unknown error'}`);
-  }
-}
-
-/**
- * Generate a secure encryption key from a password
- * @param password - Password to derive key from
- * @param salt - Optional salt (will be generated if not provided)
- * @returns Object containing the key and salt
- */
-export async function deriveKey(password: string, salt?: Uint8Array): Promise<{ key: Uint8Array; salt: Uint8Array }> {
+export async function deriveKey(
+  password: string,
+  salt: Uint8Array | null = null
+): Promise<{ key: Uint8Array; salt: Uint8Array }> {
   const useSalt = salt || randomBytes(16);
   const encoder = new TextEncoder();
-  const passwordKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  );
+  const passwordBytes = encoder.encode(password);
   
-  const key = await crypto.subtle.deriveBits(
-    {
-      name: 'PBKDF2',
-      salt: useSalt,
-      iterations: 100000,
-      hash: 'SHA-256'
-    },
-    passwordKey,
-    256
-  );
+  // Use PBKDF2 with SHA-256 for key derivation
+  const key = pbkdf2(sha256, passwordBytes, useSalt, {
+    c: 10000,  // Number of iterations
+    dkLen: 32, // Output length in bytes
+  });
   
-  return {
-    key: new Uint8Array(key),
-    salt: useSalt
-  };
+  return { key, salt: useSalt };
+}
+
+/**
+ * Encrypt a message with a password
+ */
+export async function encryptWithPassword(
+  message: string,
+  password: string
+): Promise<{ ciphertext: Uint8Array; salt: Uint8Array; nonce: Uint8Array }> {
+  const nonce = randomBytes(24);
+  const { key, salt } = await deriveKey(password);
+  
+  const cipher = xchacha20poly1305(key, nonce);
+  const ciphertext = cipher.encrypt(new TextEncoder().encode(message));
+  
+  return { ciphertext, salt, nonce };
+}
+
+/**
+ * Decrypt a message with a password
+ */
+export async function decryptWithPassword(
+  ciphertext: Uint8Array,
+  salt: Uint8Array,
+  nonce: Uint8Array,
+  password: string
+): Promise<string> {
+  const { key } = await deriveKey(password, salt);
+  const cipher = xchacha20poly1305(key, nonce);
+  const plaintext = cipher.decrypt(ciphertext);
+  
+  const decoder = new TextDecoder('utf-8', { fatal: false });
+  let decodedMessage = decoder.decode(plaintext);
+  
+  // Handle special characters and edge cases
+  decodedMessage = decodedMessage.replace(/\uFFFD/g, ''); // Remove invalid characters
+  decodedMessage = decodedMessage.trim(); // Remove leading and trailing whitespace
+
+  return decodedMessage;
 }

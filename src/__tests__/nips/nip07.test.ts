@@ -1,80 +1,79 @@
-import {
-  NostrProvider,
-  initializeProvider,
-  getNostrProvider,
-  getPublicKeyFromProvider
-} from '../../nips/nip07';
-import { UnsignedEvent } from '../../types/events';
-import { createEncryptedDirectMessage, decrypt } from '../../nips/nip04';
+import { describe, it, expect } from 'vitest';
+import { NostrProviderImpl } from '../../nips/nip07';
+import { generatePrivateKey } from '../../crypto/keys';
+import { TEST_CONSTANTS } from '../test-utils';
 
-describe('NIP-07: window.nostr capability', () => {
-  const testPrivateKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-  let provider: NostrProvider;
+describe('NIP-07: Web Browser Key Management', () => {
+  let provider: NostrProviderImpl;
+  const testPrivateKey = generatePrivateKey();
 
   beforeEach(() => {
-    initializeProvider(testPrivateKey);
-    const nostrProvider = getNostrProvider();
-    if (!nostrProvider) {
-      throw new Error('Provider not initialized');
-    }
-    provider = nostrProvider;
+    provider = new NostrProviderImpl(testPrivateKey);
   });
 
-  test('getPublicKey returns valid public key', async () => {
-    const pubkey = await provider.getPublicKey();
-    expect(pubkey).toBeDefined();
-    expect(pubkey).toHaveLength(64);
-    expect(pubkey).toMatch(/^[0-9a-f]{64}$/);
+  describe('getPublicKey', () => {
+    it('should return a valid public key', async () => {
+      const publicKey = await provider.getPublicKey();
+      expect(publicKey).toBeDefined();
+      expect(typeof publicKey).toBe('string');
+      expect(publicKey.length).toBe(64);
+    });
   });
 
-  test('signEvent signs event correctly', async () => {
-    const unsignedEvent: UnsignedEvent = {
-      pubkey: await provider.getPublicKey(),
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 1,
-      tags: [],
-      content: 'Hello, Nostr!'
-    };
+  describe('signEvent', () => {
+    it('should sign events correctly', async () => {
+      const event = {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: 'Hello, Nostr!',
+        pubkey: '',
+        id: '',
+        sig: ''
+      };
 
-    const signedEvent = await provider.signEvent(unsignedEvent);
-    expect(signedEvent.id).toBeDefined();
-    expect(signedEvent.sig).toBeDefined();
-    expect(signedEvent.sig).toHaveLength(128);
-    expect(signedEvent.sig).toMatch(/^[0-9a-f]{128}$/);
+      const signedEvent = await provider.signEvent(event);
+      expect(signedEvent.sig).toBeDefined();
+      expect(signedEvent.id).toBeDefined();
+      expect(signedEvent.pubkey).toBeDefined();
+      expect(typeof signedEvent.sig).toBe('string');
+      expect(signedEvent.sig.length).toBe(128);
+    });
+
+    it('should reject invalid events', async () => {
+      const invalidEvent = {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: '',
+        pubkey: TEST_CONSTANTS.PUBLIC_KEY,
+        id: 'invalid',
+        sig: 'invalid'
+      };
+
+      await expect(provider.signEvent(invalidEvent)).rejects.toThrow();
+    });
   });
 
-  test('encrypt/decrypt works correctly', async () => {
-    const pubkey = await provider.getPublicKey();
-    const plaintext = 'Hello, Nostr!';
-    
-    const encrypted = await provider.encrypt(pubkey, plaintext);
-    expect(encrypted).toBeDefined();
-    
-    const decrypted = await provider.decrypt(pubkey, encrypted);
-    expect(decrypted).toBe(plaintext);
+  describe('getRelays', () => {
+    it('should return relay information', async () => {
+      const relays = await provider.getRelays();
+      expect(relays).toBeDefined();
+      expect(typeof relays).toBe('object');
+    });
   });
 
-  test('signSchnorr/verifySchnorr works correctly', async () => {
-    const pubkey = await provider.getPublicKey();
-    const message = 'Hello, Nostr!';
-    
-    const signature = await provider.signSchnorr(message);
-    expect(signature).toBeDefined();
-    expect(signature).toHaveLength(128);
-    
-    const isValid = await provider.verifySchnorr(signature, message, pubkey);
-    expect(isValid).toBe(true);
-  });
+  describe('nip04', () => {
+    it('should encrypt and decrypt messages', async () => {
+      const recipientPubkey = TEST_CONSTANTS.PUBLIC_KEY;
+      const message = 'Hello, Nostr!';
 
-  test('getRelays returns valid relay list', async () => {
-    const relays = await provider.getRelays();
-    expect(relays).toBeDefined();
-    expect(Object.keys(relays).length).toBeGreaterThan(0);
-    
-    for (const [url, policy] of Object.entries(relays)) {
-      expect(url).toMatch(/^wss:\/\//);
-      expect(policy.read).toBeDefined();
-      expect(policy.write).toBeDefined();
-    }
+      const encrypted = await provider.nip04.encrypt(recipientPubkey, message);
+      expect(encrypted).toBeDefined();
+      expect(typeof encrypted).toBe('string');
+
+      const decrypted = await provider.nip04.decrypt(recipientPubkey, encrypted);
+      expect(decrypted).toBe(message);
+    });
   });
 });

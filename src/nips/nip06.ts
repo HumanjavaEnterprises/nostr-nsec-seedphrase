@@ -1,107 +1,102 @@
 import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex } from "@noble/hashes/utils";
-import { validateMnemonic, generateMnemonic, mnemonicToSeedSync } from '@scure/bip39';
-import { wordlist } from '@scure/bip39/wordlists/english';
-import * as secp256k1 from "@noble/secp256k1";
-import { bech32 } from 'bech32';
-import { fromHex } from '../utils/encoding';
+import { sha512 } from "@noble/hashes/sha512";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { validateMnemonic, generateMnemonic, mnemonicToSeedSync } from 'bip39';
+import { getPublicKey, validatePrivateKey, validatePublicKey } from '../crypto/keys';
+import { hexToNsec, hexToNpub } from './nip19';
 
-/**
- * NIP-06: Basic key derivation from mnemonic seed phrase
- * @see https://github.com/nostr-protocol/nips/blob/master/06.md
- */
+// Nostr BIP-32 derivation path (m/44'/1237'/0'/0/0)
+const NOSTR_PATH = "m/44'/1237'/0'/0/0";
 
-const NOSTR_SEED_PATH = "m/44'/1237'/0'/0/0"; // Standard BIP-44 path for Nostr
+// BIP-32 constants
+const HARDENED_OFFSET = 0x80000000;
+const MASTER_SECRET = Buffer.from('Bitcoin seed', 'utf8');
 
-/**
- * Interface for a Nostr key pair with associated formats
- */
+// Nostr BIP-32 derivation path (m/44'/1237'/0'/0/0)
+const NOSTR_BIP32_PATH = "m/44'/1237'/0'/0/0";
+
+// BIP32 constants
+const MASTER_SECRET_OLD = "Bitcoin seed";
+
 export interface KeyPair {
-  /** Private key in hex format */
   privateKey: string;
-  /** Public key in hex format */
   publicKey: string;
-  /** Private key in bech32 nsec format */
   nsec: string;
-  /** Public key in bech32 npub format */
   npub: string;
-  /** BIP39 seed phrase used to generate this key pair */
   seedPhrase?: string;
 }
 
 /**
- * Derive a private key from a mnemonic seed and optional passphrase
- * @param {Uint8Array} seed - The seed bytes from BIP-39 mnemonic
- * @param {string} [passphrase=''] - Optional passphrase for additional security
- * @returns {string} The derived private key in hex format
- */
-export function derivePrivateKey(seed: Uint8Array, passphrase: string = ''): string {
-  try {
-    // Derive the master key using HMAC-SHA512
-    const masterKey = hmac.create(sha256, 'Bitcoin seed');
-    masterKey.update(seed);
-    const masterKeyBytes = masterKey.digest();
-
-    // Parse the derivation path
-    const path = parsePath(NOSTR_SEED_PATH);
-    
-    // Derive the key through the path
-    let key = masterKeyBytes;
-    for (const index of path) {
-      const indexBuffer = new Uint8Array(4);
-      new DataView(indexBuffer.buffer).setUint32(0, index, false);
-      
-      const hmac = createHmac(key, 'key');
-      hmac.update(indexBuffer);
-      key = hmac.digest();
-    }
-
-    return bytesToHex(key);
-  } catch (error) {
-    console.error('Failed to derive private key:', error);
-    throw error;
-  }
-}
-
-/**
- * Parse a BIP-32 derivation path
- * @param {string} path - The derivation path (e.g., "m/44'/1237'/0'/0/0")
- * @returns {number[]} Array of indices
+ * Parse a BIP32 path into its components
+ * @param path - BIP32 path string (e.g. "m/44'/1237'/0'/0/0")
+ * @returns Array of path indices
  */
 function parsePath(path: string): number[] {
   if (!path.startsWith('m/')) {
-    throw new Error('Invalid derivation path');
+    throw new Error('Invalid path format');
   }
-
   return path
     .slice(2)
     .split('/')
     .map(part => {
       if (part.endsWith("'")) {
-        return parseInt(part.slice(0, -1)) + 0x80000000;
+        return parseInt(part.slice(0, -1)) + HARDENED_OFFSET;
       }
       return parseInt(part);
     });
 }
 
 /**
- * Create an HMAC instance
+ * Derive a private key using BIP32 derivation
+ * @param seed - Seed bytes
+ * @param path - BIP32 path
+ * @returns Derived private key in hex format
  */
-function createHmac(key: Uint8Array, message: string): ReturnType<typeof hmac.create> {
-  const h = hmac.create(sha256, key);
-  h.update(message);
-  return h;
+function derivePrivateKey(seed: Uint8Array, path: string): string {
+  // Generate master key
+  const I = hmac.create(sha512, MASTER_SECRET_OLD)
+    .update(seed)
+    .digest();
+  
+  let privateKey = I.slice(0, 32);
+  let chainCode = I.slice(32);
+  
+  // Derive through path
+  for (const index of parsePath(path)) {
+    const data = new Uint8Array(37);
+    if (index >= HARDENED_OFFSET) {
+      data[0] = 0x00;
+      data.set(privateKey, 1);
+      data.set(new Uint8Array(4), 33);
+      const be = new DataView(data.buffer);
+      be.setUint32(33, index);
+    } else {
+      const pub = getPublicKey(bytesToHex(privateKey));
+      data.set(hexToBytes(pub), 0);
+      const be = new DataView(data.buffer);
+      be.setUint32(33, index);
+    }
+    
+    const I = hmac.create(sha512, chainCode)
+      .update(data)
+      .digest();
+    
+    privateKey = I.slice(0, 32);
+    chainCode = I.slice(32);
+  }
+  
+  return bytesToHex(privateKey);
 }
 
 /**
  * Validate a BIP-39 mnemonic seed phrase
- * @param {string} mnemonic - The mnemonic seed phrase to validate
- * @returns {boolean} True if the mnemonic is valid, false otherwise
+ * @param mnemonic - The mnemonic seed phrase to validate
+ * @returns True if the mnemonic is valid, false otherwise
  */
 export function validateSeedPhrase(mnemonic: string): boolean {
   try {
-    return validateMnemonic(mnemonic, wordlist);
+    return validateMnemonic(mnemonic);
   } catch {
     return false;
   }
@@ -109,144 +104,195 @@ export function validateSeedPhrase(mnemonic: string): boolean {
 
 /**
  * Generate a new BIP-39 mnemonic seed phrase
- * @param {number} [strength=256] - The entropy length in bits (128-256)
- * @returns {string} The generated mnemonic seed phrase
+ * @param wordCount - The number of words in the mnemonic (12 or 24)
+ * @returns The generated mnemonic seed phrase
+ * @throws {Error} If word count is invalid
  */
-export function generateSeedPhrase(strength: number = 256): string {
-  if (![128, 160, 192, 224, 256].includes(strength)) {
-    throw new Error("Strength must be one of the following values: 128, 160, 192, 224, 256");
+export function generateSeedPhrase(wordCount: number = 12): string {
+  if (wordCount !== 12 && wordCount !== 24) {
+    throw new Error('Word count must be either 12 or 24');
   }
-  return generateMnemonic(wordlist);
+  const strength = (wordCount / 3) * 32;
+  return generateMnemonic(strength);
 }
 
 /**
- * Derives a private key from a seed phrase.
- * @param {string} seedPhrase - The seed phrase to derive the key from
- * @returns {Promise<Uint8Array>} The generated private key
+ * Derives a private key from a seed phrase using BIP32/BIP39/BIP44
+ * @param seedPhrase - The seed phrase to derive the key from
+ * @returns The generated private key in hex format
+ * @throws {Error} If seed phrase is invalid or key derivation fails
  */
-export async function privateKeyFromSeed(seedPhrase: string): Promise<Uint8Array> {
+export async function privateKeyFromSeed(seedPhrase: string): Promise<string> {
   try {
-    console.log('Converting seed phrase to seed:', seedPhrase);
-    const seed = mnemonicToSeedSync(seedPhrase, ''); // Added empty passphrase parameter
-    console.log('Derived seed:', seed);
-    const privateKey = derivePrivateKey(seed);
-    console.log('Derived private key:', privateKey);
-    return new Uint8Array(Buffer.from(privateKey, 'hex'));
+    if (!validateMnemonic(seedPhrase)) {
+      throw new Error('Invalid mnemonic');
+    }
+
+    // Generate seed from mnemonic
+    const seed = mnemonicToSeedSync(seedPhrase);
+    
+    // Derive master key
+    const I = hmac.create(sha512, MASTER_SECRET);
+    I.update(seed);
+    const IL = I.digest().slice(0, 32);
+    const IR = I.digest().slice(32);
+    
+    // Derive child keys
+    let key = IL;
+    let chainCode = IR;
+
+    // Parse path
+    const path = NOSTR_PATH.split('/');
+    if (path[0] === 'm') path.shift();
+
+    // Derive each level
+    for (const level of path) {
+      let index = parseInt(level.replace("'", ""));
+      if (level.includes("'")) index += HARDENED_OFFSET;
+
+      const data = new Uint8Array(37);
+      
+      // Handle hardened derivation
+      if (index >= HARDENED_OFFSET) {
+        data[0] = 0x00;
+        data.set(key, 1);
+        const be = new DataView(data.buffer);
+        be.setUint32(33, index);
+      } else {
+        const pub = getPublicKey(bytesToHex(key));
+        data.set(hexToBytes(pub));
+        const be = new DataView(data.buffer);
+        be.setUint32(33, index);
+      }
+
+      const I = hmac.create(sha512, chainCode);
+      I.update(data);
+      const IL = I.digest().slice(0, 32);
+      const IR = I.digest().slice(32);
+
+      // Derive next level
+      key = IL;
+      chainCode = IR;
+    }
+
+    const privateKey = bytesToHex(key);
+    if (!validatePrivateKey(privateKey)) {
+      throw new Error('Invalid private key generated');
+    }
+
+    return privateKey;
   } catch (error) {
-    console.error('Failed to derive private key from seed:', error);
-    throw error;
+    throw new Error(`Failed to derive private key: ${error instanceof Error ? error.message : 'unknown error'}`);
+  }
+}
+
+/**
+ * Generate a new random mnemonic phrase
+ */
+export function generateSeedPhraseNew(strength: number = 256): string {
+  return generateMnemonic(strength);
+}
+
+/**
+ * Generate a key pair from a seed phrase
+ */
+export async function seedPhraseToKeyPair(seedPhrase: string): Promise<{ privateKey: string; publicKey: string; nsec: string; npub: string }> {
+  try {
+    const privateKeyHex = await privateKeyFromSeed(seedPhrase);
+    
+    if (!validatePrivateKey(privateKeyHex)) {
+      throw new Error('Invalid private key');
+    }
+    
+    const publicKey = getPublicKey(privateKeyHex);
+    if (!validatePublicKey(publicKey)) {
+      throw new Error('Invalid public key generated');
+    }
+    
+    return {
+      privateKey: privateKeyHex,
+      publicKey,
+      nsec: hexToNsec(privateKeyHex),
+      npub: hexToNpub(publicKey)
+    };
+  } catch (error) {
+    throw new Error(`Failed to generate key pair: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
 /**
  * Convert a BIP39 seed phrase to a Nostr key pair
- * @param {string} seedPhrase - The BIP39 seed phrase to convert
- * @returns {KeyPair} A key pair containing private and public keys in various formats
+ * @param seedPhrase - The BIP39 seed phrase to convert
+ * @returns A key pair containing private and public keys in various formats
  * @throws {Error} If the seed phrase is invalid or key generation fails
  */
-export async function seedPhraseToKeyPair(seedPhrase: string): Promise<KeyPair> {
-  try {
-    if (!validateSeedPhrase(seedPhrase)) {
-      throw new Error("Invalid seed phrase");
-    }
+export function seedPhraseToKeyPairOld(seedPhrase: string): KeyPair {
+  const privateKey = privateKeyFromSeedOld(seedPhrase);
+  const publicKey = getPublicKey(privateKey);
+  
+  return {
+    privateKey,
+    publicKey,
+    nsec: hexToNsec(privateKey),
+    npub: hexToNpub(publicKey),
+    seedPhrase
+  };
+}
 
-    const privateKey = await privateKeyFromSeed(seedPhrase);
-    const publicKey = getPublicKeyFromSeed(bytesToHex(privateKey));
-    
-    return {
-      privateKey: bytesToHex(privateKey),
-      publicKey,
-      nsec: hexToNsec(bytesToHex(privateKey)),
-      npub: hexToNpub(publicKey),
-      seedPhrase,
-    };
-  } catch (error) {
-    console.error("Failed to create key pair from seed phrase:", error);
-    throw error;
+/**
+ * Derives a private key from a seed phrase using BIP32/BIP39/BIP44
+ * @param seedPhrase - The seed phrase to derive the key from
+ * @returns The generated private key in hex format
+ * @throws {Error} If seed phrase is invalid or key derivation fails
+ */
+function privateKeyFromSeedOld(seedPhrase: string): string {
+  if (!validateSeedPhrase(seedPhrase)) {
+    throw new Error('Invalid seed phrase');
   }
+
+  // Generate seed from mnemonic
+  const seed = mnemonicToSeedSync(seedPhrase);
+  
+  // Derive private key using BIP32
+  const privateKey = derivePrivateKey(seed, NOSTR_BIP32_PATH);
+  
+  // Validate the derived private key
+  if (!validatePrivateKey(privateKey)) {
+    throw new Error('Invalid private key generated');
+  }
+  
+  return privateKey;
 }
 
 /**
  * Generate a new key pair with a random seed phrase
- * @returns {KeyPair} A new key pair containing private and public keys in various formats
+ * @returns A new key pair containing private and public keys in various formats
  */
-export async function generateKeyPairWithSeed(): Promise<KeyPair> {
+export function generateKeyPairWithSeed(): KeyPair {
   const seedPhrase = generateSeedPhrase();
-  return seedPhraseToKeyPair(seedPhrase);
+  return seedPhraseToKeyPairOld(seedPhrase);
 }
 
 /**
  * Create a key pair from a hex private key
- * @param {string} privateKeyHex - The hex-encoded private key
- * @returns {KeyPair} A key pair containing private and public keys in various formats
+ * @param privateKeyHex - The hex-encoded private key
+ * @returns A key pair containing private and public keys in various formats
  * @throws {Error} If the private key is invalid
  */
 export function keyPairFromPrivateKey(privateKeyHex: string): KeyPair {
-  try {
-    // Convert hex to bytes using common utility
-    const privateKeyBytes = fromHex(privateKeyHex);
-    
-    // Validate the private key
-    if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
-      throw new Error('Invalid private key');
-    }
-
-    // Get the public key
-    const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
-
-    return {
-      privateKey: privateKeyHex,
-      publicKey: bytesToHex(publicKey),
-      nsec: hexToNsec(privateKeyHex),
-      npub: hexToNpub(bytesToHex(publicKey))
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to create key pair: ${error.message}`);
-    }
-    throw new Error('Failed to create key pair: Unknown error');
+  if (!validatePrivateKey(privateKeyHex)) {
+    throw new Error('Invalid private key');
   }
-}
-
-/**
- * Get the public key from a private key
- * @param {string} privateKey - The hex-encoded private key
- * @returns {string} The hex-encoded public key
- * @throws {Error} If the private key is invalid
- */
-export function getPublicKeyFromSeed(privateKey: string): string {
-  try {
-    return bytesToHex(secp256k1.getPublicKey(privateKey, true));
-  } catch (error) {
-    console.error("Failed to get public key:", error);
-    throw error;
+  
+  const publicKey = getPublicKey(privateKeyHex);
+  if (!validatePublicKey(publicKey)) {
+    throw new Error('Invalid public key generated');
   }
-}
-
-/**
- * Convert a hex private key to bech32 nsec format
- * @param {string} privateKey - The hex-encoded private key
- * @returns {string} The bech32-encoded private key
- */
-function hexToNsec(privateKey: string): string {
-  return bech32.encode('nsec', bech32.toWords(Buffer.from(privateKey, 'hex')));
-}
-
-/**
- * Convert a hex public key to bech32 npub format
- * @param {string} publicKey - The hex-encoded public key
- * @returns {string} The bech32-encoded public key
- */
-function hexToNpub(publicKey: string): string {
-  return bech32.encode('npub', bech32.toWords(Buffer.from(publicKey, 'hex')));
-}
-
-/**
- * Derive the public key from a seed phrase
- * @param {string} seedPhrase - The seed phrase to derive the public key from
- * @returns {Promise<string>} The derived public key
- */
-export async function derivePublicKeyFromSeedPhrase(seedPhrase: string): Promise<string> {
-  const keyPair = await seedPhraseToKeyPair(seedPhrase);
-  return keyPair.publicKey;
+  
+  return {
+    privateKey: privateKeyHex,
+    publicKey,
+    nsec: hexToNsec(privateKeyHex),
+    npub: hexToNpub(publicKey)
+  };
 }

@@ -1,126 +1,113 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { generatePrivateKey, getPublicKey } from '../../crypto/keys';
+import { describe, it, expect } from 'vitest';
 import {
   createDelegation,
   verifyDelegation,
-  isDelegationValid,
   createDelegationTag,
-  DelegationConditions
+  Nip26Error
 } from '../../nips/nip26';
+import { generatePrivateKey, getPublicKey } from '../../crypto/keys';
 
 describe('NIP-26: Delegated Event Signing', () => {
-  let delegatorPrivateKey: string;
-  let delegatorPublicKey: string;
-  let delegateePrivateKey: string;
-  let delegateePublicKey: string;
-  
-  beforeEach(() => {
-    // Generate fresh keys for each test
-    delegatorPrivateKey = generatePrivateKey();
-    delegatorPublicKey = getPublicKey(delegatorPrivateKey);
-    delegateePrivateKey = generatePrivateKey();
-    delegateePublicKey = getPublicKey(delegateePrivateKey);
-  });
+  const delegatorPrivateKey = generatePrivateKey();
+  const delegatorPublicKey = getPublicKey(delegatorPrivateKey);
+  const delegateePrivateKey = generatePrivateKey();
+  const delegateePublicKey = getPublicKey(delegateePrivateKey);
+  const conditions = "kinds=1,2&created_at<1679000000";
+  const since = Math.floor(Date.now() / 1000);
+  const until = since + 60 * 60 * 24; // 24 hours from now
 
-  describe('createDelegation', () => {
-    it('should create a valid delegation token', async () => {
-      const conditions: DelegationConditions = {
-        kinds: [1, 2],
-        since: Math.floor(Date.now() / 1000),
-        until: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
-      };
-
-      const token = await createDelegation(delegatorPrivateKey, delegateePublicKey, conditions);
-      expect(token).toBeTruthy();
+  describe('Delegation Creation', () => {
+    it('should create valid delegation tokens', async () => {
+      const token = await createDelegation(
+        delegatorPrivateKey,
+        delegateePublicKey,
+        conditions,
+        since,
+        until
+      );
+      expect(token).toBeDefined();
       expect(typeof token).toBe('string');
+      expect(token.length).toBe(128); // 64 bytes in hex
     });
 
-    it('should throw error for invalid keys', async () => {
-      const conditions: DelegationConditions = {
-        kinds: [1],
-        since: Math.floor(Date.now() / 1000),
-        until: Math.floor(Date.now() / 1000) + 3600
-      };
+    it('should reject invalid private keys', async () => {
+      await expect(createDelegation(
+        'invalid_key',
+        delegateePublicKey,
+        conditions,
+        since,
+        until
+      )).rejects.toThrow(Nip26Error);
+    });
 
-      await expect(() =>
-        createDelegation('invalid-key', delegateePublicKey, conditions)
-      ).rejects.toThrow();
-
-      await expect(() =>
-        createDelegation(delegatorPrivateKey, 'invalid-key', conditions)
-      ).rejects.toThrow();
+    it('should reject invalid public keys', async () => {
+      await expect(createDelegation(
+        delegatorPrivateKey,
+        'invalid_key',
+        conditions,
+        since,
+        until
+      )).rejects.toThrow(Nip26Error);
     });
   });
 
-  describe('verifyDelegation', () => {
-    it('should verify valid delegation', async () => {
-      const conditions: DelegationConditions = {
-        kinds: [1],
-        since: Math.floor(Date.now() / 1000),
-        until: Math.floor(Date.now() / 1000) + 3600
-      };
-
-      const token = await createDelegation(delegatorPrivateKey, delegateePublicKey, conditions);
-      const isValid = await verifyDelegation(token, delegatorPublicKey, delegateePublicKey, conditions);
+  describe('Delegation Verification', () => {
+    it('should verify valid delegations', async () => {
+      const token = await createDelegation(
+        delegatorPrivateKey,
+        delegateePublicKey,
+        conditions,
+        since,
+        until
+      );
+      const isValid = await verifyDelegation(
+        delegatorPublicKey,
+        delegateePublicKey,
+        conditions,
+        since,
+        until,
+        token
+      );
       expect(isValid).toBe(true);
     });
 
-    it('should reject invalid delegation', async () => {
-      const conditions: DelegationConditions = {
-        kinds: [1],
-        since: Math.floor(Date.now() / 1000),
-        until: Math.floor(Date.now() / 1000) + 3600
-      };
-
-      const token = await createDelegation(delegatorPrivateKey, delegateePublicKey, conditions);
-      const isValid = await verifyDelegation(token, delegateePublicKey, delegatorPublicKey, conditions);
+    it('should reject invalid delegations', async () => {
+      const token = await createDelegation(
+        delegatorPrivateKey,
+        delegateePublicKey,
+        conditions,
+        since,
+        until
+      );
+      const isValid = await verifyDelegation(
+        delegateePublicKey, // wrong key order
+        delegatorPublicKey,
+        conditions,
+        since,
+        until,
+        token
+      );
       expect(isValid).toBe(false);
     });
   });
 
-  describe('isDelegationValid', () => {
-    it('should validate time-based conditions', () => {
-      const now = Math.floor(Date.now() / 1000);
-      
-      // Valid time window
-      expect(isDelegationValid({
-        since: now - 3600,
-        until: now + 3600
-      })).toBe(true);
-
-      // Expired delegation
-      expect(isDelegationValid({
-        since: now - 7200,
-        until: now - 3600
-      })).toBe(false);
-
-      // Future delegation
-      expect(isDelegationValid({
-        since: now + 3600,
-        until: now + 7200
-      })).toBe(false);
-    });
-  });
-
-  describe('createDelegationTag', () => {
-    it('should create valid delegation tag', async () => {
-      const conditions: DelegationConditions = {
-        kinds: [1],
-        since: Math.floor(Date.now() / 1000),
-        until: Math.floor(Date.now() / 1000) + 3600
-      };
-
-      const token = await createDelegation(delegatorPrivateKey, delegateePublicKey, conditions);
+  describe('Delegation Tags', () => {
+    it('should create valid delegation tags', async () => {
       const tag = await createDelegationTag(
-        delegatorPublicKey,
+        delegatorPrivateKey,
+        delegateePublicKey,
         conditions,
-        token
+        since,
+        until
       );
-
       expect(Array.isArray(tag)).toBe(true);
+      expect(tag.length).toBe(6);
       expect(tag[0]).toBe('delegation');
       expect(tag[1]).toBe(delegatorPublicKey);
-      expect(typeof tag[2]).toBe('string');
+      expect(tag[2]).toBe(conditions);
+      expect(tag[3]).toBe(since.toString());
+      expect(tag[4]).toBe(until.toString());
+      expect(typeof tag[5]).toBe('string');
     });
   });
 });

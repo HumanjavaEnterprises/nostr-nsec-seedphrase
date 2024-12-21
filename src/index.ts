@@ -4,9 +4,13 @@
  */
 import { pino } from 'pino';
 
+// Initialize crypto setup first
+import './core/setup';
+
 // Configure logging
 export const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
+  level: process.env.LOG_LEVEL || 'info',
+  name: 'nostr-nsec-seedphrase',
   transport: {
     target: 'pino-pretty',
     options: {
@@ -15,19 +19,30 @@ export const logger = pino({
   }
 });
 
-// Core functionality
-export { createUnsignedEvent, createSignedEvent, EventCreationError } from './core/event';
-export { DelegationConditions, isDelegationValid, validateUnsignedEvent, validateSignedEvent, validateEvent } from './core/validation';
+// Export types
+export {
+  NostrEvent,
+  UnsignedEvent,
+  EventKind,
+  EventValidationResult
+} from './types';
 
-// Cryptographic utilities
+// Export core functionality
+export * from './utils/encoding';
 export * from './crypto/keys';
-export * from './crypto/signing';
 export { encrypt, decrypt } from './crypto/encryption';
+export { schnorrSign, schnorrVerify, createEventSignature } from './crypto/signing';
+export { 
+  validateSignedEvent, 
+  validateEvent,
+  createUnsignedEventFromPubkey as createUnsignedEvent 
+} from './core/event';
+export { validateUnsignedEvent } from './core/validation';
 
-// NIPs implementation
-export { verifyEventSignature, createNip01SignedEvent } from './nips/nip01';
-export { createEncryptedDirectMessage } from './nips/nip04';  // Only export what's unique to NIP-04
-export { seedPhraseToKeyPair, generateKeyPairWithSeed, keyPairFromPrivateKey } from './nips/nip06';
+// Export NIP implementations
+export * from './nips/nip01';
+export * from './nips/nip04';  
+export * from './nips/nip06';
 export * from './nips/nip07';
 export * from './nips/nip13';
 export * from './nips/nip19';
@@ -36,9 +51,3 @@ export * from './nips/nip39';
 export * from './nips/nip44';
 export * from './nips/nip47';
 export * from './nips/nip49';
-
-// Utility functions
-export * from './utils/encoding';
-
-// Types
-export * from './types';

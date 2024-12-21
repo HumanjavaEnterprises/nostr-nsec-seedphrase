@@ -5,8 +5,8 @@ import {
   decrypt,
   encryptWithPassword,
   decryptWithPassword,
-  deriveKey
 } from '../../nips/nip44';
+import { deriveKey } from '../../crypto/encryption';
 
 describe('NIP-44: Encrypted Direct Messages v2', () => {
   let senderPrivateKey: string;
@@ -61,7 +61,7 @@ describe('NIP-44: Encrypted Direct Messages v2', () => {
       const encrypted = await encryptWithPassword(message, password);
       expect(encrypted).toBeTruthy();
       
-      const decrypted = await decryptWithPassword(encrypted, password);
+      const decrypted = await decryptWithPassword(encrypted.ciphertext, encrypted.salt, encrypted.nonce, password);
       expect(decrypted).toBe(message);
     });
 
@@ -82,7 +82,7 @@ describe('NIP-44: Encrypted Direct Messages v2', () => {
       
       const encrypted = await encryptWithPassword(message, password);
       expect(async () => {
-        await decryptWithPassword(encrypted, wrongPassword)
+        await decryptWithPassword(encrypted.ciphertext, encrypted.salt, encrypted.nonce, wrongPassword)
       }).rejects.toThrow();
     });
   });

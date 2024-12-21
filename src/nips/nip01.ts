@@ -17,7 +17,8 @@ export async function createNip01SignedEvent(
   tags: string[][] = []
 ): Promise<NostrEvent> {
   const unsignedEvent = createUnsignedEventFromPubkey(pubkey, kind, content, tags);
-  return await signEvent(unsignedEvent, privateKey);
+  const signedEvent = await signEvent(unsignedEvent, privateKey);
+  return { ...signedEvent, id: getEventHash(unsignedEvent) };
 }
 
 // Re-export core functions for backward compatibility

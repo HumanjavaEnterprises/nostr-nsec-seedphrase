@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   verifyNip05,
   getNip05Relays,
@@ -29,17 +29,21 @@ describe('NIP-05: DNS-based Names', () => {
 
   describe('verifyNip05', () => {
     const mockFetch = vi.fn();
-    global.fetch = mockFetch;
-
+    
     beforeEach(() => {
+      vi.stubGlobal('fetch', mockFetch);
       mockFetch.mockReset();
     });
 
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
     it('should verify valid NIP-05 identifier', async () => {
-      const pubkey = '0123456789abcdef';
+      const pubkey = '2c7cc62a697ea3a7826521f3fd34f0cb273693cbe5e9310f35449f43622a5c12';
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: async () => ({
           names: {
             alice: pubkey
           }
@@ -48,6 +52,10 @@ describe('NIP-05: DNS-based Names', () => {
 
       const result = await verifyNip05('alice@example.com', pubkey);
       expect(result).toBe(true);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://example.com/.well-known/nostr.json?name=alice'
+      );
     });
 
     it('should return false for invalid NIP-05 identifier', async () => {
@@ -55,30 +63,44 @@ describe('NIP-05: DNS-based Names', () => {
         ok: false
       });
 
-      const result = await verifyNip05('invalid@example.com', '0123456789abcdef');
+      const result = await verifyNip05('invalid@example.com', '2c7cc62a697ea3a7826521f3fd34f0cb273693cbe5e9310f35449f43622a5c12');
       expect(result).toBe(false);
     });
   });
 
   describe('getNip05Relays', () => {
     const mockFetch = vi.fn();
-    global.fetch = mockFetch;
-
+    
     beforeEach(() => {
+      vi.stubGlobal('fetch', mockFetch);
       mockFetch.mockReset();
     });
 
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
     it('should get relays for valid NIP-05 identifier', async () => {
+      const pubkey = '2c7cc62a697ea3a7826521f3fd34f0cb273693cbe5e9310f35449f43622a5c12';
       const relays = ['wss://relay1.example.com', 'wss://relay2.example.com'];
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          relays: relays
+        json: async () => ({
+          names: {
+            alice: pubkey
+          },
+          relays: {
+            [pubkey]: relays
+          }
         })
       });
 
       const result = await getNip05Relays('alice@example.com');
       expect(result).toEqual(relays);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://example.com/.well-known/nostr.json?name=alice'
+      );
     });
 
     it('should return null for invalid NIP-05 identifier', async () => {

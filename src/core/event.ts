@@ -1,11 +1,12 @@
-import { NostrEvent, UnsignedEvent, EventKind } from "../types/events";
+import { NostrEvent, UnsignedEvent, EventKind, EventValidationResult } from "../types/events";
 import { getPublicKey } from "../crypto/keys";
 import { createEventSignature } from "../crypto/signing";
-import { validateUnsignedEvent } from "./validation";
+import { validateUnsignedEvent as validateUnsignedEventFromValidation } from "./validation";
 import { sha256 } from "@noble/hashes/sha256";
 import { utf8Encoder, toHex } from "../utils/encoding";
 import { bytesToHex, hexToBytes } from "../utils/encoding";
 import * as secp256k1 from "@noble/secp256k1";
+import { hmac } from '@noble/hashes/hmac';
 
 export class EventCreationError extends Error {
   constructor(message: string) {
@@ -30,7 +31,7 @@ export function createUnsignedEvent(
     content,
   };
 
-  const validation = validateUnsignedEvent(event);
+  const validation = validateUnsignedEventFromValidation(event);
   if (!validation.isValid) {
     throw new EventCreationError(
       `Invalid event structure: ${validation.errors.join(', ')}`
@@ -108,16 +109,28 @@ export async function signEvent(event: UnsignedEvent, privateKey: string): Promi
  */
 export async function verifyEventSignature(event: NostrEvent): Promise<boolean> {
   try {
-    const hash = hexToBytes(event.id);
+    // Compute the event hash from the event data
+    const computedHash = sha256(Buffer.from(JSON.stringify([
+      0,
+      event.pubkey,
+      event.created_at,
+      event.kind,
+      event.tags,
+      event.content
+    ])));
+
+    // Verify that the computed hash matches the event ID
+    if (bytesToHex(computedHash) !== event.id) {
+      return false;
+    }
+
     const signature = hexToBytes(event.sig);
     const publicKey = hexToBytes(event.pubkey);
     
-    return await secp256k1.verify(signature, hash, publicKey);
+    return await secp256k1.verify(signature, computedHash, publicKey);
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to verify signature: ${error.message}`);
-    }
-    throw new Error('Failed to verify signature: Unknown error');
+    console.error('Failed to verify signature:', error);
+    return false;
   }
 }
 
@@ -137,4 +150,57 @@ export function createUnsignedEventFromPubkey(
     tags,
     content,
   };
+}
+
+/**
+ * Validate an unsigned event according to Nostr protocol
+ */
+import { validateUnsignedEvent } from "./validation";
+
+/**
+ * Validate a signed event according to Nostr protocol
+ */
+export async function validateSignedEvent(event: NostrEvent): Promise<EventValidationResult> {
+  const errors: string[] = [];
+
+  // First validate as unsigned event
+  const unsignedValidation = validateUnsignedEventFromValidation(event);
+  errors.push(...unsignedValidation.errors);
+
+  // Check signature-specific fields
+  if (!event.id) errors.push('Missing id');
+  if (!event.sig) errors.push('Missing signature');
+
+  // Verify event hash
+  const calculatedId = getEventHash(event);
+  if (event.id !== calculatedId) {
+    errors.push('Invalid event hash');
+  }
+
+  // Verify signature
+  if (event.sig) {
+    try {
+      const isValid = await verifyEventSignature(event);
+      if (!isValid) {
+        errors.push('Invalid signature');
+      }
+    } catch (error) {
+      errors.push(`Signature verification failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Validate any event (signed or unsigned)
+ */
+export function validateEvent(event: UnsignedEvent | NostrEvent): Promise<EventValidationResult> {
+  if ('sig' in event) {
+    return validateSignedEvent(event);
+  }
+  return Promise.resolve(validateUnsignedEventFromValidation(event));
 }

@@ -1,7 +1,7 @@
-import { schnorrSign, schnorrVerify } from '../crypto/signing';
-import { getPublicKey } from '../crypto/keys';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { schnorrSign, schnorrVerify } from "../crypto/signing";
+import { validatePrivateKey, validatePublicKey, getPublicKey } from "../crypto/keys";
 
 export class Nip26Error extends Error {
   constructor(message: string) {
@@ -11,40 +11,36 @@ export class Nip26Error extends Error {
 }
 
 /**
- * Conditions for delegation according to NIP-26
- */
-export interface DelegationConditions {
-  kinds?: number[];
-  since?: number;
-  until?: number;
-}
-
-/**
- * Create a delegation token according to NIP-26
- * @param delegatorPrivateKey - The private key of the delegator
- * @param delegateePubkey - The public key of the person receiving the delegation
- * @param conditions - Conditions for the delegation (kinds, since, until)
- * @returns The delegation token
+ * Create a delegation token for delegated event signing
  */
 export async function createDelegation(
   delegatorPrivateKey: string,
   delegateePubkey: string,
-  conditions: DelegationConditions
+  conditions: string = "",
+  since: number = 0,
+  until: number = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 // 30 days by default
 ): Promise<string> {
   try {
-    const query = [
-      'delegation',
-      delegateePubkey,
-      conditions.kinds?.join(',') || '',
-      conditions.since?.toString() || '',
-      conditions.until?.toString() || '',
-    ].join(':');
+    if (!validatePrivateKey(delegatorPrivateKey)) {
+      throw new Error('Invalid delegator private key');
+    }
+    if (!validatePublicKey(delegateePubkey)) {
+      throw new Error('Invalid delegatee public key');
+    }
 
-    const messageBytes = new TextEncoder().encode(query);
-    const hash = sha256(messageBytes);
-    const signature = await schnorrSign(bytesToHex(hash), delegatorPrivateKey);
+    const delegatorPubkey = getPublicKey(delegatorPrivateKey);
     
-    return signature;
+    const token = [
+      "delegation",
+      delegatorPubkey,
+      delegateePubkey,
+      conditions,
+      since.toString(),
+      until.toString(),
+    ].join(":");
+
+    const hash = sha256(Buffer.from(token));
+    return await schnorrSign(bytesToHex(hash), delegatorPrivateKey);
   } catch (error) {
     throw new Nip26Error(`Failed to create delegation: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
@@ -52,73 +48,68 @@ export async function createDelegation(
 
 /**
  * Verify a delegation token
- * @param token - The delegation token to verify
- * @param delegatorPubkey - The public key of the delegator
- * @param delegateePubkey - The public key of the delegatee
- * @param conditions - The conditions under which the delegation was created
- * @returns boolean indicating if the delegation is valid
  */
 export async function verifyDelegation(
-  token: string,
   delegatorPubkey: string,
   delegateePubkey: string,
-  conditions: DelegationConditions
+  conditions: string,
+  since: number,
+  until: number,
+  token: string
 ): Promise<boolean> {
   try {
-    const query = [
-      'delegation',
+    if (!validatePublicKey(delegatorPubkey)) {
+      throw new Error('Invalid delegator public key');
+    }
+    if (!validatePublicKey(delegateePubkey)) {
+      throw new Error('Invalid delegatee public key');
+    }
+
+    const message = [
+      "delegation",
+      delegatorPubkey,
       delegateePubkey,
-      conditions.kinds?.join(',') || '',
-      conditions.since?.toString() || '',
-      conditions.until?.toString() || '',
-    ].join(':');
+      conditions,
+      since.toString(),
+      until.toString(),
+    ].join(":");
 
-    const messageBytes = new TextEncoder().encode(query);
-    const hash = sha256(messageBytes);
-    
+    const hash = sha256(Buffer.from(message));
     return await schnorrVerify(token, bytesToHex(hash), delegatorPubkey);
-  } catch {
-    return false;
+  } catch (error) {
+    throw new Nip26Error(`Failed to verify delegation: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
 /**
- * Check if a delegation is currently valid based on time conditions
- * @param conditions - The delegation conditions to check
- * @returns boolean indicating if the delegation is currently valid
+ * Create a delegation tag for an event
  */
-export function isDelegationValid(conditions: DelegationConditions): boolean {
-  const now = Math.floor(Date.now() / 1000);
-  
-  if (conditions.since && now < conditions.since) {
-    return false;
-  }
-  
-  if (conditions.until && now > conditions.until) {
-    return false;
-  }
-  
-  return true;
-}
+export async function createDelegationTag(
+  delegatorPrivateKey: string,
+  delegateePubkey: string,
+  conditions: string = "",
+  since: number = 0,
+  until: number = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30
+): Promise<string[]> {
+  try {
+    const delegatorPubkey = getPublicKey(delegatorPrivateKey);
+    const token = await createDelegation(
+      delegatorPrivateKey,
+      delegateePubkey,
+      conditions,
+      since,
+      until
+    );
 
-/**
- * Create a delegation tag for use in NOSTR events
- * @param delegator - The public key of the delegator
- * @param conditions - The delegation conditions
- * @param token - The delegation token
- * @returns Array representing the delegation tag
- */
-export function createDelegationTag(
-  delegator: string,
-  conditions: DelegationConditions,
-  token: string
-): string[] {
-  return [
-    'delegation',
-    delegator,
-    conditions.kinds?.join(',') || '',
-    conditions.since?.toString() || '',
-    conditions.until?.toString() || '',
-    token,
-  ];
+    return [
+      "delegation",
+      delegatorPubkey,
+      conditions,
+      since.toString(),
+      until.toString(),
+      token,
+    ];
+  } catch (error) {
+    throw new Nip26Error(`Failed to create delegation tag: ${error instanceof Error ? error.message : 'unknown error'}`);
+  }
 }

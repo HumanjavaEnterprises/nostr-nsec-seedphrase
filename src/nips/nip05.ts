@@ -18,21 +18,47 @@ export async function verifyNip05(
   pubkey: string
 ): Promise<boolean> {
   try {
-    const [name, domain] = identifier.split('@');
-    if (!name || !domain) {
+    // Validate pubkey format
+    if (!pubkey || !/^[0-9a-f]{64}$/.test(pubkey.toLowerCase())) {
       return false;
     }
 
-    const url = `https://${domain}/.well-known/nostr.json?name=${name}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
+    const parsed = parseNip05(identifier);
+    if (!parsed) {
+      return false;
+    }
+
+    const { name, domain } = parsed;
+    const url = `https://${domain}/.well-known/nostr.json?name=${encodeURIComponent(name)}`;
+    console.log('Fetching URL:', url); // Log the URL for debugging
+    let response: Response; // Declare response here
+    try {
+      response = await fetch(url);
+      if (!response.ok) {
+        console.error('Fetch response not OK:', response.statusText);
+        return false;
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Fetch error:', error.message);
+      } else {
+        console.error('Unknown fetch error:', error);
+      }
       return false;
     }
 
     const data = await response.json() as Nip05Response;
-    return data.names[name]?.toLowerCase() === pubkey.toLowerCase();
-  } catch {
+    if (!data || !data.names || !data.names[name]) {
+      return false;
+    }
+
+    // Normalize pubkeys by removing any hex prefix and converting to lowercase
+    const normalizedStoredPubkey = data.names[name].toLowerCase().replace(/^0x/, '');
+    const normalizedInputPubkey = pubkey.toLowerCase().replace(/^0x/, '');
+
+    return normalizedStoredPubkey === normalizedInputPubkey;
+  } catch (error) {
+    console.error('NIP-05 verification error:', error);
     return false;
   }
 }
@@ -52,9 +78,20 @@ export async function getNip05Relays(
     }
 
     const url = `https://${domain}/.well-known/nostr.json?name=${name}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
+    console.log('Fetching URL:', url); // Log the URL for debugging
+    let response: Response; // Declare response here
+    try {
+      response = await fetch(url);
+      if (!response.ok) {
+        console.error('Fetch response not OK:', response.statusText);
+        return null;
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Fetch error:', error.message);
+      } else {
+        console.error('Unknown fetch error:', error);
+      }
       return null;
     }
 

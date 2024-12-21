@@ -1,20 +1,48 @@
-import { randomBytes, scrypt } from 'crypto';
-import { createCipheriv, createDecipheriv } from 'crypto';
+import { scrypt } from '@noble/hashes/scrypt';
+import { xchacha20poly1305 } from '@noble/ciphers/chacha';
+import { randomBytes } from 'crypto';
+import { Buffer } from 'buffer';
 import { bytesToHex, hexToBytes } from '../utils/encoding';
 
 // Default encryption parameters
-const DEFAULT_SCRYPT_PARAMS = {
-  N: 32768, // CPU/memory cost parameter (power of 2)
-  r: 8,     // Block size parameter
-  p: 1,     // Parallelization parameter
-  dkLen: 32 // Derived key length
+const DEFAULT_SCRYPT_PARAMS: ScryptParams = {
+  N: 32768,  // 2^15
+  r: 8,
+  p: 1,
+  dkLen: 32
 };
 
 interface ScryptParams {
-  N: number;
-  r: number;
-  p: number;
-  dkLen: number;
+  N: number;  // CPU/memory cost parameter
+  r: number;  // Block size parameter
+  p: number;  // Parallelization parameter
+  dkLen?: number; // Derived key length
+}
+
+export function validateScryptParams(params: ScryptParams): boolean {
+  if (!params) return false;
+  
+  // N must be a power of 2 and >= 16384 (2^14)
+  if (!params.N || typeof params.N !== 'number' || params.N < 16384 || (params.N & (params.N - 1)) !== 0) {
+    return false;
+  }
+  
+  // r must be >= 8
+  if (!params.r || typeof params.r !== 'number' || params.r < 8) {
+    return false;
+  }
+  
+  // p must be >= 1
+  if (!params.p || typeof params.p !== 'number' || params.p < 1) {
+    return false;
+  }
+  
+  // dkLen must be >= 32 if specified
+  if (params.dkLen !== undefined && (typeof params.dkLen !== 'number' || params.dkLen < 32)) {
+    return false;
+  }
+  
+  return true;
 }
 
 /**
@@ -38,43 +66,44 @@ export async function encryptPrivateKey(
   password: string,
   params: ScryptParams = DEFAULT_SCRYPT_PARAMS
 ): Promise<string> {
+  if (!privateKey || !password) {
+    throw new Error('Private key and password are required');
+  }
+
+  if (!validateScryptParams(params)) {
+    throw new Error('Invalid scrypt params');
+  }
+
   try {
-    if (!privateKey || !password) {
-      throw new Error('Private key and password are required');
-    }
-
-    // Generate salt and IV
+    // Generate salt
     const salt = randomBytes(16);
-    const iv = randomBytes(16);
-
-    // Derive key using scrypt
-    const key = await new Promise<Buffer>((resolve, reject) => {
-      scrypt(password, salt, params.dkLen, params, (err, derivedKey) => {
-        if (err) reject(err);
-        else resolve(derivedKey);
-      });
-    });
-
-    // Create cipher and encrypt
-    const cipher = createCipheriv('aes-256-gcm', key, iv);
-    const privateKeyBytes = hexToBytes(privateKey);
-    const encrypted = Buffer.concat([
-      cipher.update(privateKeyBytes),
-      cipher.final()
-    ]);
-
-    // Get auth tag
-    const authTag = cipher.getAuthTag();
-
-    // Combine all components
-    const encryptedData = Buffer.concat([
+    
+    // Derive encryption key using scrypt
+    const key = scrypt(
+      new TextEncoder().encode(password),
       salt,
-      iv,
-      authTag,
-      encrypted
-    ]);
+      {
+        N: params.N,
+        r: params.r,
+        p: params.p,
+        dkLen: params.dkLen || 32
+      }
+    );
 
-    return encryptedData.toString('base64');
+    // Generate nonce for XChaCha20-Poly1305
+    const nonce = randomBytes(24);
+
+    // Encrypt the private key
+    const cipher = xchacha20poly1305(key, nonce);
+    const ciphertext = cipher.encrypt(Buffer.from(privateKey, 'hex'));
+
+    // Combine salt, nonce, and ciphertext
+    const combined = new Uint8Array(salt.length + nonce.length + ciphertext.length);
+    combined.set(salt);
+    combined.set(nonce, salt.length);
+    combined.set(ciphertext, salt.length + nonce.length);
+
+    return Buffer.from(combined).toString('base64');
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to encrypt private key: ${error.message}`);
@@ -91,35 +120,39 @@ export async function decryptPrivateKey(
   password: string,
   params: ScryptParams = DEFAULT_SCRYPT_PARAMS
 ): Promise<string> {
+  if (!encryptedKey || !password) {
+    throw new Error('Encrypted key and password are required');
+  }
+
+  if (!validateScryptParams(params)) {
+    throw new Error('Invalid scrypt params');
+  }
+
   try {
-    // Decode base64
-    const encryptedData = Buffer.from(encryptedKey, 'base64');
+    const combined = Buffer.from(encryptedKey, 'base64');
 
-    // Extract components
-    const salt = encryptedData.slice(0, 16);
-    const iv = encryptedData.slice(16, 32);
-    const authTag = encryptedData.slice(32, 48);
-    const encrypted = encryptedData.slice(48);
+    // Extract salt, nonce, and ciphertext
+    const salt = combined.slice(0, 16);
+    const nonce = combined.slice(16, 40);
+    const ciphertext = combined.slice(40);
 
-    // Derive key using scrypt
-    const key = await new Promise<Buffer>((resolve, reject) => {
-      scrypt(password, salt, params.dkLen, params, (err, derivedKey) => {
-        if (err) reject(err);
-        else resolve(derivedKey);
-      });
-    });
+    // Derive decryption key using scrypt
+    const key = scrypt(
+      new TextEncoder().encode(password),
+      salt,
+      {
+        N: params.N,
+        r: params.r,
+        p: params.p,
+        dkLen: params.dkLen || 32
+      }
+    );
 
-    // Create decipher
-    const decipher = createDecipheriv('aes-256-gcm', key, iv);
-    decipher.setAuthTag(authTag);
+    // Decrypt the private key
+    const cipher = xchacha20poly1305(key, nonce);
+    const decrypted = cipher.decrypt(ciphertext);
 
-    // Decrypt
-    const decrypted = Buffer.concat([
-      decipher.update(encrypted),
-      decipher.final()
-    ]);
-
-    return bytesToHex(decrypted);
+    return Buffer.from(decrypted).toString('hex');
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to decrypt private key: ${error.message}`);
@@ -133,12 +166,11 @@ export async function decryptPrivateKey(
  */
 export async function validateEncryptedPrivateKey(
   encryptedKey: string,
-  password: string,
-  params: ScryptParams = DEFAULT_SCRYPT_PARAMS
+  password: string
 ): Promise<boolean> {
   try {
-    const decrypted = await decryptPrivateKey(encryptedKey, password, params);
-    return decrypted.length === 64;
+    await decryptPrivateKey(encryptedKey, password);
+    return true;
   } catch {
     return false;
   }

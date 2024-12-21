@@ -2,6 +2,15 @@ import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { wordlist } from '@scure/bip39/wordlists/english';
 
+// Polyfill for crypto in Node.js environment
+const getCrypto = async () => {
+  if (typeof crypto !== 'undefined') {
+    return crypto;
+  }
+  // Node.js environment
+  return import('crypto').then((crypto) => crypto.webcrypto);
+};
+
 // Utility function to convert hex string to bytes
 function fromHex(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
@@ -21,10 +30,20 @@ export class SeedError extends Error {
 /**
  * Validates a list of seed words
  * @param words Array of seed words to validate
- * @returns true if all words are valid BIP39 words
+ * @returns true if all words are valid BIP39 words and length is correct
  */
 export function validateSeedWords(words: string[]): boolean {
-  return words.every(word => wordlist.includes(word.toLowerCase()));
+  // Check if input is valid array with exactly 12 words
+  if (!Array.isArray(words) || words.length !== 12) {
+    return false;
+  }
+
+  // Check if all words are non-empty strings and in the wordlist
+  return words.every(word => 
+    typeof word === 'string' && 
+    word.length > 0 && 
+    wordlist.includes(word.toLowerCase())
+  );
 }
 
 /**
@@ -63,6 +82,26 @@ export function parseSeedPhrase(phrase: string): string[] {
 }
 
 /**
+ * Generates a 16-byte random salt
+ */
+async function generateSalt(): Promise<Uint8Array> {
+  const cryptoObj = await getCrypto() as Crypto;
+  const arr = new Uint8Array(16);
+  cryptoObj.getRandomValues(arr);
+  return arr;
+}
+
+/**
+ * Generates a 12-byte random initialization vector
+ */
+async function generateIV(): Promise<Uint8Array> {
+  const cryptoObj = await getCrypto() as Crypto;
+  const arr = new Uint8Array(12);
+  cryptoObj.getRandomValues(arr);
+  return arr;
+}
+
+/**
  * Encrypts a seed phrase with a password
  * @param seedPhrase The seed phrase to encrypt
  * @param password The password to encrypt with
@@ -70,58 +109,52 @@ export function parseSeedPhrase(phrase: string): string[] {
  */
 export async function encryptSeedPhrase(seedPhrase: string, password: string): Promise<string> {
   try {
+    const salt = await generateSalt();
+    const iv = await generateIV();
+    const cryptoObj = await getCrypto();
+
+    // Derive key using PBKDF2
     const encoder = new TextEncoder();
-    const phraseBytes = encoder.encode(seedPhrase);
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    
-    // Derive key from password
-    const key = await crypto.subtle.importKey(
+    const keyMaterial = await cryptoObj.subtle.importKey(
       'raw',
       encoder.encode(password),
-      { name: 'PBKDF2' },
+      'PBKDF2',
       false,
-      ['deriveBits']
+      ['deriveKey']
     );
-    
-    const derivedKey = await crypto.subtle.deriveBits(
+
+    const key = await cryptoObj.subtle.deriveKey(
       {
         name: 'PBKDF2',
         salt,
         iterations: 100000,
         hash: 'SHA-256'
       },
-      key,
-      256
-    );
-    
-    // Encrypt using AES-GCM
-    const encryptKey = await crypto.subtle.importKey(
-      'raw',
-      derivedKey,
-      { name: 'AES-GCM' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
       false,
       ['encrypt']
     );
-    
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await crypto.subtle.encrypt(
+
+    // Encrypt the seed phrase
+    const ciphertext = await cryptoObj.subtle.encrypt(
       {
         name: 'AES-GCM',
         iv
       },
-      encryptKey,
-      phraseBytes
+      key,
+      encoder.encode(seedPhrase)
     );
-    
-    // Combine salt + iv + ciphertext
-    const result = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+
+    // Combine salt, iv, and ciphertext
+    const result = new Uint8Array(salt.length + iv.length + new Uint8Array(ciphertext).length);
     result.set(salt, 0);
     result.set(iv, salt.length);
-    result.set(new Uint8Array(encrypted), salt.length + iv.length);
-    
+    result.set(new Uint8Array(ciphertext), salt.length + iv.length);
+
     return bytesToHex(result);
   } catch (error) {
-    throw new SeedError(`Failed to encrypt seed phrase: ${error instanceof Error ? error.message : 'unknown error'}`);
+    throw new SeedError(`Failed to encrypt seed phrase: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -133,53 +166,47 @@ export async function encryptSeedPhrase(seedPhrase: string, password: string): P
  */
 export async function decryptSeedPhrase(encryptedPhrase: string, password: string): Promise<string> {
   try {
-    const data = new Uint8Array(fromHex(encryptedPhrase));
+    const cryptoObj = await getCrypto();
+    const data = fromHex(encryptedPhrase);
     const salt = data.slice(0, 16);
     const iv = data.slice(16, 28);
     const ciphertext = data.slice(28);
-    
+
+    // Derive key using PBKDF2
     const encoder = new TextEncoder();
-    
-    // Derive key from password
-    const key = await crypto.subtle.importKey(
+    const keyMaterial = await cryptoObj.subtle.importKey(
       'raw',
       encoder.encode(password),
-      { name: 'PBKDF2' },
+      'PBKDF2',
       false,
-      ['deriveBits']
+      ['deriveKey']
     );
-    
-    const derivedKey = await crypto.subtle.deriveBits(
+
+    const key = await cryptoObj.subtle.deriveKey(
       {
         name: 'PBKDF2',
         salt,
         iterations: 100000,
         hash: 'SHA-256'
       },
-      key,
-      256
-    );
-    
-    // Decrypt using AES-GCM
-    const decryptKey = await crypto.subtle.importKey(
-      'raw',
-      derivedKey,
-      { name: 'AES-GCM' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
       false,
       ['decrypt']
     );
-    
-    const decrypted = await crypto.subtle.decrypt(
+
+    // Decrypt the seed phrase
+    const decrypted = await cryptoObj.subtle.decrypt(
       {
         name: 'AES-GCM',
         iv
       },
-      decryptKey,
+      key,
       ciphertext
     );
-    
+
     return new TextDecoder().decode(decrypted);
   } catch (error) {
-    throw new SeedError(`Failed to decrypt seed phrase: ${error instanceof Error ? error.message : 'unknown error'}`);
+    throw new SeedError(`Failed to decrypt seed phrase: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

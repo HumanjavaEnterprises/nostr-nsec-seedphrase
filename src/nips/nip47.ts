@@ -1,8 +1,12 @@
 import { schnorrSign } from '../crypto/signing';
 import { getPublicKey } from '../crypto/keys';
-import { encrypt, decrypt } from './nip44';
+import { encrypt, decrypt } from '../crypto/encryption';
+import { secp256k1 } from '@noble/curves/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
+import { TextEncoder } from 'util';
+
+const utf8Encoder = new TextEncoder();
 
 export interface WalletConnectMetadata {
   name: string;
@@ -47,27 +51,17 @@ export class NostrWalletConnect {
     this.permissions = new Map();
   }
 
-  /**
-   * Connect an application to the wallet
-   * @param appPubkey - Application's public key
-   * @param appMetadata - Application's metadata
-   * @param requestedPermissions - List of permissions requested
-   * @returns Connection response
-   */
   async connect(
     appPubkey: string,
     appMetadata: WalletConnectMetadata,
     requestedPermissions: string[]
   ): Promise<WalletResponse> {
-    // Store app information
     this.connectedApps.set(appPubkey, appMetadata);
     
-    // Initialize permissions
     if (!this.permissions.has(appPubkey)) {
       this.permissions.set(appPubkey, new Set());
     }
     
-    // Add requested permissions
     const appPermissions = this.permissions.get(appPubkey)!;
     requestedPermissions.forEach(perm => appPermissions.add(perm));
     
@@ -80,14 +74,7 @@ export class NostrWalletConnect {
     };
   }
 
-  /**
-   * Handle an incoming request from an application
-   * @param appPubkey - Application's public key
-   * @param request - The request to handle
-   * @returns Response to the request
-   */
   async handleRequest(appPubkey: string, request: WalletRequest): Promise<WalletResponse> {
-    // Verify app is connected
     if (!this.connectedApps.has(appPubkey)) {
       return {
         id: request.id,
@@ -98,7 +85,6 @@ export class NostrWalletConnect {
       };
     }
 
-    // Check permissions
     const appPermissions = this.permissions.get(appPubkey);
     if (!appPermissions?.has(request.method)) {
       return {
@@ -143,87 +129,119 @@ export class NostrWalletConnect {
     }
   }
 
-  /**
-   * Handle a sign event request
-   * @param request - The signing request
-   * @returns Signed event
-   */
   private async handleSignEvent(request: WalletRequest): Promise<WalletResponse> {
-    const event = request.params.event;
-    const eventHash = sha256(Buffer.from(JSON.stringify([
-      0,
-      event.pubkey,
-      event.created_at,
-      event.kind,
-      event.tags,
-      event.content
-    ])));
-
-    const signature = await schnorrSign(eventHash, this.privateKey);
+    const { event } = request.params;
     
-    return {
-      id: request.id,
-      result: {
-        ...event,
-        sig: signature  // schnorrSign already returns hex string
-      }
-    };
+    if (!event) {
+      return {
+        id: request.id,
+        error: {
+          code: 400,
+          message: 'Missing event parameter'
+        }
+      };
+    }
+
+    try {
+      const eventData = [
+        0,
+        event.pubkey,
+        event.created_at,
+        event.kind,
+        event.tags,
+        event.content
+      ];
+      
+      const serializedEvent = JSON.stringify(eventData);
+      const eventHash = sha256(utf8Encoder.encode(serializedEvent));
+      const signature = await schnorrSign(bytesToHex(eventHash), this.privateKey);
+      
+      return {
+        id: request.id,
+        result: {
+          sig: signature
+        }
+      };
+    } catch (error: any) {
+      return {
+        id: request.id,
+        error: {
+          code: 5000,
+          message: error.message
+        }
+      };
+    }
   }
 
-  /**
-   * Handle an encrypt request
-   * @param request - The encryption request
-   * @returns Encrypted data
-   */
   private async handleEncrypt(request: WalletRequest): Promise<WalletResponse> {
     const { pubkey, plaintext } = request.params;
     
-    const encrypted = encrypt(plaintext, this.privateKey, pubkey);
-    
-    return {
-      id: request.id,
-      result: encrypted
-    };
+    if (!pubkey || !plaintext) {
+      return {
+        id: request.id,
+        error: {
+          code: 400,
+          message: 'Missing required parameters'
+        }
+      };
+    }
+
+    try {
+      const ciphertext = await encrypt(plaintext, this.privateKey, pubkey);
+      return {
+        id: request.id,
+        result: ciphertext
+      };
+    } catch (error: any) {
+      return {
+        id: request.id,
+        error: {
+          code: 5000,
+          message: error.message
+        }
+      };
+    }
   }
 
-  /**
-   * Handle a decrypt request
-   * @param request - The decryption request
-   * @returns Decrypted data
-   */
   private async handleDecrypt(request: WalletRequest): Promise<WalletResponse> {
     const { pubkey, ciphertext } = request.params;
     
-    const decrypted = decrypt(ciphertext, this.privateKey, pubkey);
-    
-    return {
-      id: request.id,
-      result: decrypted
-    };
+    if (!pubkey || !ciphertext) {
+      return {
+        id: request.id,
+        error: {
+          code: 400,
+          message: 'Missing required parameters'
+        }
+      };
+    }
+
+    try {
+      const plaintext = await decrypt(ciphertext, this.privateKey, pubkey);
+      return {
+        id: request.id,
+        result: plaintext
+      };
+    } catch (error: any) {
+      return {
+        id: request.id,
+        error: {
+          code: 5000,
+          message: error.message
+        }
+      };
+    }
   }
 
-  /**
-   * Disconnect an application
-   * @param appPubkey - Application's public key
-   */
   disconnect(appPubkey: string): void {
     this.connectedApps.delete(appPubkey);
     this.permissions.delete(appPubkey);
   }
 
-  /**
-   * Get list of connected applications
-   * @returns Map of connected applications and their metadata
-   */
   getConnectedApps(): Map<string, WalletConnectMetadata> {
-    return new Map(this.connectedApps);
+    return this.connectedApps;
   }
 
-  /**
-   * Get permissions for a specific application
-   * @param appPubkey - Application's public key
-   * @returns Set of permissions or undefined if app not connected
-   */
   getAppPermissions(appPubkey: string): Set<string> | undefined {
     return this.permissions.get(appPubkey);
   }

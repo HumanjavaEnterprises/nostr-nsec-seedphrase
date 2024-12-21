@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { mockSecp256k1, mockBech32, TEST_CONSTANTS } from '../test-utils';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { TEST_CONSTANTS, setupHMAC } from '../test-utils';
 import {
   npubEncode,
   nsecEncode,
@@ -11,79 +11,84 @@ import {
   hexToNpub,
   hexToNsec
 } from '../../nips/nip19';
-
-// Setup mocks
-mockSecp256k1();
-mockBech32();
+import { PREFIXES } from '../../crypto/encoding';
 
 describe('NIP-19: bech32-encoded entities', () => {
+  beforeAll(() => {
+    setupHMAC();
+  });
+
   describe('Encoding', () => {
     it('should encode public keys to npub format', () => {
       const npub = npubEncode(TEST_CONSTANTS.PUBLIC_KEY);
-      expect(npub).toBeDefined();
-      expect(npub.startsWith('npub1')).toBe(true);
+      expect(npub).toMatch(/^npub1/);
     });
 
     it('should encode private keys to nsec format', () => {
       const nsec = nsecEncode(TEST_CONSTANTS.PRIVATE_KEY);
-      expect(nsec).toBeDefined();
-      expect(nsec.startsWith('nsec1')).toBe(true);
+      expect(nsec).toMatch(/^nsec1/);
     });
 
     it('should encode note IDs', () => {
       const noteId = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       const note = noteEncode(noteId);
-      expect(note).toBeDefined();
-      expect(note.startsWith('note1')).toBe(true);
+      expect(note).toMatch(/^note1/);
     });
   });
 
   describe('Decoding', () => {
     it('should decode npub format to public keys', () => {
-      const npub = npubEncode(TEST_CONSTANTS.PUBLIC_KEY);
+      const pubkey = TEST_CONSTANTS.PUBLIC_KEY;
+      const npub = npubEncode(pubkey);
+      expect(npub).toMatch(/^npub1/);
       const decoded = npubDecode(npub);
-      expect(decoded).toBe(TEST_CONSTANTS.PUBLIC_KEY);
+      expect(decoded.toLowerCase()).toBe(pubkey.toLowerCase());
     });
 
     it('should decode nsec format to private keys', () => {
-      const nsec = nsecEncode(TEST_CONSTANTS.PRIVATE_KEY);
+      const privkey = TEST_CONSTANTS.PRIVATE_KEY;
+      const nsec = nsecEncode(privkey);
+      expect(nsec).toMatch(/^nsec1/);
       const decoded = nsecDecode(nsec);
-      expect(decoded).toBe(TEST_CONSTANTS.PRIVATE_KEY);
+      expect(decoded.toLowerCase()).toBe(privkey.toLowerCase());
     });
 
     it('should decode note format to note IDs', () => {
-      const noteId = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      const noteId = TEST_CONSTANTS.TEST_EVENT.id;
       const note = noteEncode(noteId);
+      expect(note).toMatch(/^note1/);
       const decoded = noteDecode(note);
-      expect(decoded).toBe(noteId);
+      expect(decoded.toLowerCase()).toBe(noteId.toLowerCase());
     });
 
     it('should handle generic decoding', () => {
-      const testCases = [
-        { input: npubEncode(TEST_CONSTANTS.PUBLIC_KEY), type: 'npub' },
-        { input: nsecEncode(TEST_CONSTANTS.PRIVATE_KEY), type: 'nsec' },
-        { input: noteEncode('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'), type: 'note' }
-      ];
+      // Test npub decoding
+      const npub = npubEncode(TEST_CONSTANTS.PUBLIC_KEY);
+      const decodedNpub = decodeNip19(npub);
+      expect(decodedNpub.type).toBe(PREFIXES.NPUB);
+      if (decodedNpub.type === PREFIXES.NPUB) {
+        expect((decodedNpub.data as string).toLowerCase()).toBe(TEST_CONSTANTS.PUBLIC_KEY.toLowerCase());
+      }
 
-      testCases.forEach(({ input, type }) => {
-        const decoded = decodeNip19(input);
-        expect(decoded.type).toBe(type);
-        expect(decoded.data).toBeDefined();
-      });
+      // Test nsec decoding
+      const nsec = nsecEncode(TEST_CONSTANTS.PRIVATE_KEY);
+      const decodedNsec = decodeNip19(nsec);
+      expect(decodedNsec.type).toBe(PREFIXES.NSEC);
+      if (decodedNsec.type === PREFIXES.NSEC) {
+        expect((decodedNsec.data as string).toLowerCase()).toBe(TEST_CONSTANTS.PRIVATE_KEY.toLowerCase());
+      }
     });
   });
 
   describe('Hex Conversion', () => {
     it('should convert hex to npub', () => {
       const npub = hexToNpub(TEST_CONSTANTS.PUBLIC_KEY);
-      expect(npub).toBeDefined();
-      expect(npub.startsWith('npub1')).toBe(true);
+      expect(npub).toMatch(/^npub1/);
     });
 
     it('should convert hex to nsec', () => {
       const nsec = hexToNsec(TEST_CONSTANTS.PRIVATE_KEY);
-      expect(nsec).toBeDefined();
-      expect(nsec.startsWith('nsec1')).toBe(true);
+      expect(nsec).toMatch(/^nsec1/);
     });
   });
 

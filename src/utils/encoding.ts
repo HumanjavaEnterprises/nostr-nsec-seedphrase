@@ -148,17 +148,24 @@ export function bech32Encode(prefix: string, hex: string): string {
   if (!hex || typeof hex !== 'string') {
     throw new Error('Invalid hex string: must be a non-empty string');
   }
-  if (!hex.match(/^[0-9a-fA-F]+$/)) {
+
+  // Normalize hex string
+  hex = hex.toLowerCase();
+  if (hex.length % 2 !== 0) {
+    hex = '0' + hex;
+  }
+
+  if (!hex.match(/^[0-9a-f]+$/)) {
     throw new Error('Invalid hex string: contains non-hex characters');
   }
+
   if (prefix !== NPUB_PREFIX && prefix !== NSEC_PREFIX && prefix !== NOTE_PREFIX) {
     throw new Error(`Invalid prefix: ${prefix}. Must be one of: ${NPUB_PREFIX}, ${NSEC_PREFIX}, ${NOTE_PREFIX}`);
   }
-  
-  const data = nobleHexDecode(hex);
-  const words = convertBits(Array.from(data), 8, 5, true);
-  
+
   try {
+    const data = fromHex(hex);
+    const words = convertBits(Array.from(data), 8, 5, true);
     return bech32.encode(prefix, words, 1000);
   } catch (error) {
     throw new Error(`Failed to encode bech32: ${error instanceof Error ? error.message : 'unknown error'}`);
@@ -171,12 +178,18 @@ export function bech32Encode(prefix: string, hex: string): string {
 export function bech32Decode(str: string): { type: string; data: string } {
   try {
     const { prefix, words } = bech32.decode(str, 1000);
-    const data = convertBits(Array.from(words), 5, 8, false);
-    const hex = nobleHexEncode(new Uint8Array(data));
-    
+    if (!words || words.length === 0) {
+      throw new Error('Invalid bech32 string: no data');
+    }
+
+    const data = convertBits(words, 5, 8, false);
+    if (!data || data.length === 0) {
+      throw new Error('Invalid bech32 string: conversion failed');
+    }
+
     return {
       type: prefix,
-      data: hex
+      data: toHex(new Uint8Array(data))
     };
   } catch (error) {
     throw new Error(`Failed to decode bech32: ${error instanceof Error ? error.message : 'unknown error'}`);

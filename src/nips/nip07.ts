@@ -1,122 +1,99 @@
 // nip07.ts
-import { UnsignedEvent, NostrEvent } from '../types/events';
-import { getEventHash } from '../core/event';
-import { schnorrSign, schnorrVerify } from '../crypto/signing';
-import { getPublicKey } from '../crypto/keys';
-import { encrypt, decrypt } from '../crypto/encryption';
+import { validatePrivateKey } from '../crypto/keys';
+import { schnorrSign, schnorrVerify, createEventSignature } from '../crypto/signing';
+import { encrypt, decrypt } from '../nips/nip04';
+import { UnsignedEvent } from '../types/events';
+import { createNip01SignedEvent } from '../nips/nip01';
+
+let privateKey: string | null = null;
 
 /**
- * NIP-07: window.nostr capability for web browsers
- * @see https://github.com/nostr-protocol/nips/blob/master/07.md
+ * Initialize the Nostr provider with a private key
  */
-
-export interface NIP01Handler {
-  getPublicKey(): Promise<string>;
-  signEvent(event: UnsignedEvent): Promise<NostrEvent>;
-}
-
-export interface NIP04Handler {
-  encrypt(pubkey: string, plaintext: string): Promise<string>;
-  decrypt(pubkey: string, ciphertext: string): Promise<string>;
-}
-
-export interface NIP44Handler {
-  signSchnorr(message: string): Promise<string>;
-  verifySchnorr(signature: string, message: string, pubkey: string): Promise<boolean>;
-}
-
-export interface RelayHandler {
-  getRelays(): Promise<{ [url: string]: { read: boolean; write: boolean } }>;
-}
-
-export interface NostrProvider extends NIP01Handler, NIP04Handler, NIP44Handler, RelayHandler {}
-
-declare global {
-  interface Window {
-    nostr?: NostrProvider;
+export function initializeProvider(key: string) {
+  if (!validatePrivateKey(key)) {
+    throw new Error('Invalid private key');
   }
+  privateKey = key;
 }
 
-export class NostrProviderImpl implements NostrProvider {
+/**
+ * Get the Nostr provider implementation
+ * @throws Error if provider is not initialized with a private key
+ */
+export interface INostrProvider {
+  getPublicKey(): Promise<string>;
+  signEvent(event: UnsignedEvent): Promise<any>;
+  getRelays(): Promise<Record<string, { read: boolean; write: boolean }>>;
+  signSchnorr(message: string): Promise<string>;
+  encrypt(recipientPubKey: string, content: string): Promise<string>;
+  decrypt(senderPubKey: string, content: string): Promise<string>;
+  nip04: {
+    encrypt(pubkey: string, plaintext: string): Promise<string>;
+    decrypt(pubkey: string, ciphertext: string): Promise<string>;
+  };
+}
+
+export class NostrProviderImpl implements INostrProvider {
   private privateKey: string;
 
   constructor(privateKey: string) {
-    if (!privateKey) {
-      throw new Error('Provider requires a private key');
+    if (!privateKey || !validatePrivateKey(privateKey)) {
+      throw new Error('Invalid private key');
     }
     this.privateKey = privateKey;
   }
 
-  // NIP-01: Basic Protocol Flow Handlers
   async getPublicKey(): Promise<string> {
-    return getPublicKey(this.privateKey);
+    // TODO: implement getPublicKey
+    throw new Error('Not implemented');
   }
 
-  async signEvent(event: UnsignedEvent): Promise<NostrEvent> {
-    const id = getEventHash(event);
-    const sig = await schnorrSign(id, this.privateKey);
-    
+  async signEvent(event: UnsignedEvent): Promise<any> {
+    return createEventSignature(event, this.privateKey);
+  }
+
+  async getRelays(): Promise<Record<string, { read: boolean; write: boolean }>> {
     return {
-      ...event,
-      id,
-      sig,
-    };
-  }
-
-  // NIP-04: Encrypted Direct Message
-  async encrypt(pubkey: string, plaintext: string): Promise<string> {
-    return encrypt(plaintext, this.privateKey, pubkey);
-  }
-
-  async decrypt(pubkey: string, ciphertext: string): Promise<string> {
-    return decrypt(ciphertext, this.privateKey, pubkey);
-  }
-
-  // NIP-44: Schnorr Signatures
-  async signSchnorr(message: string): Promise<string> {
-    return schnorrSign(message, this.privateKey);
-  }
-
-  async verifySchnorr(
-    signature: string,
-    message: string,
-    pubkey: string
-  ): Promise<boolean> {
-    return schnorrVerify(signature, message, pubkey);
-  }
-
-  // Relay Management
-  async getRelays(): Promise<{ [url: string]: { read: boolean; write: boolean } }> {
-    // Default relays - in a real implementation, this would be configurable
-    return {
-      'wss://relay.damus.io': { read: true, write: true },
       'wss://relay.nostr.info': { read: true, write: true },
+      'wss://nostr-pub.wellorder.net': { read: true, write: true }
     };
   }
-}
 
-/**
- * Initialize the window.nostr provider with a private key
- */
-export function initializeProvider(key: string): void {
-  if (typeof window !== 'undefined') {
-    window.nostr = new NostrProviderImpl(key);
+  async signSchnorr(message: string): Promise<string> {
+    return await schnorrSign(message, this.privateKey);
+  }
+
+  nip04 = {
+    encrypt: async (pubkey: string, plaintext: string): Promise<string> => {
+      return encrypt(this.privateKey, pubkey, plaintext);
+    },
+    decrypt: async (pubkey: string, ciphertext: string): Promise<string> => {
+      return decrypt(this.privateKey, pubkey, ciphertext);
+    }
+  };
+
+  async encrypt(recipientPubKey: string, content: string): Promise<string> {
+    return encrypt(this.privateKey, recipientPubKey, content);
+  }
+
+  async decrypt(senderPubKey: string, content: string): Promise<string> {
+    return decrypt(this.privateKey, senderPubKey, content);
   }
 }
 
-/**
- * Get the window.nostr provider if available
- */
-export function getNostrProvider(): NostrProvider | null {
-  if (typeof window !== 'undefined' && window.nostr) {
-    return window.nostr;
+export const getProvider = (): INostrProvider => {
+  if (!privateKey) {
+    throw new Error('Provider not initialized. Call initializeProvider first.');
   }
-  return null;
+  return new NostrProviderImpl(privateKey);
+};
+
+export interface NostrEvent extends UnsignedEvent {
+  sig: string;
 }
 
-/**
- * Get public key from provider
- */
-export async function getPublicKeyFromProvider(provider: NostrProvider): Promise<string> {
-  return provider.getPublicKey();
+export interface RelayPolicy {
+  read: boolean;
+  write: boolean;
 }

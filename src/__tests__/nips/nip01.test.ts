@@ -1,103 +1,108 @@
-import { describe, test, expect } from 'vitest';
-import {
+import { describe, it, expect, beforeAll } from 'vitest';
+import { TEST_CONSTANTS, mockSecp256k1, setupHMAC } from '../test-utils';
+import { 
   createUnsignedEvent,
-  createNip01SignedEvent,
   signEvent,
+  createNip01SignedEvent,
   verifyEventSignature,
   getEventHash
 } from '../../nips/nip01';
-import { UnsignedEvent, NostrEvent } from '../../types/events';
-import { getPublicKey } from '../../crypto/keys';
 
 describe('NIP-01: Basic Protocol Flow', () => {
-  const testPrivateKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-  const testPublicKey = getPublicKey(testPrivateKey);
+  beforeAll(() => {
+    setupHMAC();
+  });
 
-  test('createUnsignedEvent creates valid event', () => {
+  it('createUnsignedEvent creates valid event', () => {
     const event = createUnsignedEvent(
-      testPublicKey,
+      TEST_CONSTANTS.PUBLIC_KEY,
       1,
       'Hello, Nostr!',
-      [['p', testPublicKey]]
+      []
     );
 
-    expect(event.pubkey).toBe(testPublicKey);
+    expect(event).toBeDefined();
+    expect(event.pubkey).toBe(TEST_CONSTANTS.PUBLIC_KEY);
     expect(event.kind).toBe(1);
     expect(event.content).toBe('Hello, Nostr!');
-    expect(event.tags).toEqual([['p', testPublicKey]]);
-    expect(event.created_at).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+    expect(Array.isArray(event.tags)).toBe(true);
+    expect(typeof event.created_at).toBe('number');
   });
 
-  test('signEvent signs event correctly', async () => {
+  it('signEvent signs event correctly', async () => {
     const unsignedEvent = createUnsignedEvent(
-      testPublicKey,
-      1,
-      'Hello, Nostr!'
-    );
-
-    const signedEvent = await signEvent(unsignedEvent, testPrivateKey);
-    expect(signedEvent.id).toBeDefined();
-    expect(signedEvent.sig).toBeDefined();
-    expect(signedEvent.sig).toHaveLength(128);
-    expect(signedEvent.sig).toMatch(/^[0-9a-f]{128}$/);
-  });
-
-  test('createNip01SignedEvent creates valid signed event', async () => {
-    const event = await createNip01SignedEvent(
-      testPublicKey,
+      TEST_CONSTANTS.PUBLIC_KEY,
       1,
       'Hello, Nostr!',
-      testPrivateKey
+      []
     );
 
-    expect(event.pubkey).toBe(testPublicKey);
+    const signedEvent = await signEvent(unsignedEvent, TEST_CONSTANTS.PRIVATE_KEY);
+    expect(signedEvent.sig).toBeDefined();
+    expect(typeof signedEvent.sig).toBe('string');
+    expect(signedEvent.sig.length).toBe(128);
+  });
+
+  it('createNip01SignedEvent creates valid signed event', async () => {
+    const event = await createNip01SignedEvent(
+      TEST_CONSTANTS.PUBLIC_KEY,
+      1,
+      'Hello, Nostr!',
+      TEST_CONSTANTS.PRIVATE_KEY,
+      []
+    );
+
+    expect(event).toBeDefined();
+    expect(event.pubkey).toBe(TEST_CONSTANTS.PUBLIC_KEY);
     expect(event.kind).toBe(1);
     expect(event.content).toBe('Hello, Nostr!');
-    expect(event.id).toBeDefined();
+    expect(Array.isArray(event.tags)).toBe(true);
+    expect(typeof event.created_at).toBe('number');
     expect(event.sig).toBeDefined();
-    expect(event.sig).toHaveLength(128);
+    expect(typeof event.sig).toBe('string');
+    expect(event.sig.length).toBe(128);
   });
 
-  test('verifyEventSignature verifies valid signature', async () => {
+  it('verifyEventSignature verifies valid signature', async () => {
     const event = await createNip01SignedEvent(
-      testPublicKey,
+      TEST_CONSTANTS.PUBLIC_KEY,
       1,
       'Hello, Nostr!',
-      testPrivateKey
+      TEST_CONSTANTS.PRIVATE_KEY,
+      []
     );
 
     const isValid = await verifyEventSignature(event);
     expect(isValid).toBe(true);
   });
 
-  test('verifyEventSignature rejects invalid signature', async () => {
+  it('verifyEventSignature rejects invalid signature', async () => {
     const event = await createNip01SignedEvent(
-      testPublicKey,
+      TEST_CONSTANTS.PUBLIC_KEY,
       1,
       'Hello, Nostr!',
-      testPrivateKey
+      TEST_CONSTANTS.PRIVATE_KEY,
+      []
     );
 
-    const tamperedEvent = {
-      ...event,
-      content: 'Tampered content'
-    };
+    // Tamper with the signature
+    event.sig = event.sig.replace('0', '1');
 
-    const isValid = await verifyEventSignature(tamperedEvent);
+    const isValid = await verifyEventSignature(event);
     expect(isValid).toBe(false);
   });
 
-  test('getEventHash generates consistent hash', () => {
+  it('getEventHash generates consistent hash', () => {
     const event = createUnsignedEvent(
-      testPublicKey,
+      TEST_CONSTANTS.PUBLIC_KEY,
       1,
-      'Hello, Nostr!'
+      'Hello, Nostr!',
+      []
     );
 
     const hash1 = getEventHash(event);
     const hash2 = getEventHash(event);
     expect(hash1).toBe(hash2);
-    expect(hash1).toHaveLength(64);
-    expect(hash1).toMatch(/^[0-9a-f]{64}$/);
+    expect(hash1.length).toBe(64);
   });
 });

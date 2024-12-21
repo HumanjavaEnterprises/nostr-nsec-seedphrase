@@ -1,5 +1,6 @@
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
+import { hmac } from "@noble/hashes/hmac";
 import { UnsignedEvent } from "../types/events";
 
 /**
@@ -64,4 +65,24 @@ export function calculateEventId(event: UnsignedEvent): string {
     event.content,
   ]);
   return bytesToHex(sha256(Buffer.from(serialized)));
+}
+
+/**
+ * Calculate HMAC-SHA256 of a message
+ * @param {Uint8Array} key - The key for HMAC
+ * @param {Uint8Array} message - The message to hash
+ * @returns {Uint8Array} The HMAC result
+ */
+export function hmacSha256(key: Uint8Array, message: Uint8Array): Uint8Array {
+  return hmac(sha256, key, message);
+}
+
+/**
+ * Calculate HMAC-SHA256 of a message asynchronously
+ * @param {Uint8Array} key - The key for HMAC
+ * @param {Uint8Array} message - The message to hash
+ * @returns {Promise<Uint8Array>} The HMAC result
+ */
+export async function hmacSha256Async(key: Uint8Array, message: Uint8Array): Promise<Uint8Array> {
+  return hmac(sha256, key, message);
 }
