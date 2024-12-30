@@ -1,7 +1,7 @@
 {
   "name": "nostr-nsec-seedphrase",
-  "version": "0.6.0",
-  "description": "A TypeScript library for managing Nostr keys with seed phrases, including event signing, verification, and WebSocket utilities",
+  "version": "0.6.1",
+  "description": "A comprehensive TypeScript library for Nostr key management with BIP39 seed phrases, supporting NIP-01, NIP-06, NIP-19, and NIP-26. Features include key generation, event signing, bech32 encoding/decoding, and secure cryptographic operations.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -38,7 +38,15 @@
     "bip39",
     "crypto",
     "typescript",
-    "websocket"
+    "nip-01",
+    "nip-06",
+    "nip-19",
+    "nip-26",
+    "bech32",
+    "event signing",
+    "key management",
+    "cryptography",
+    "nostr-tools"
   ],
   "author": "vveerrgg",
   "license": "MIT",
