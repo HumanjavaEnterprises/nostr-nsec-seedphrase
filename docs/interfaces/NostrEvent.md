@@ -1,105 +1,97 @@
-[nostr-nsec-seedphrase - v0.4.2](../README.md) / [Exports](../modules.md) / NostrEvent
+[**nostr-nsec-seedphrase v0.6.0**](../README.md)
+
+***
+
+[nostr-nsec-seedphrase](../globals.md) / NostrEvent
 
 # Interface: NostrEvent
 
 Represents a signed Nostr event
 
-**`See`**
+## See
 
 https://github.com/nostr-protocol/nips/blob/master/01.md
-
-## Table of contents
-
-### Properties
-
-- [content](NostrEvent.md#content)
-- [created\_at](NostrEvent.md#created_at)
-- [id](NostrEvent.md#id)
-- [kind](NostrEvent.md#kind)
-- [pubkey](NostrEvent.md#pubkey)
-- [sig](NostrEvent.md#sig)
-- [tags](NostrEvent.md#tags)
 
 ## Properties
 
 ### content
 
-• **content**: `string`
+> **content**: `string`
 
 Event content (arbitrary string)
 
 #### Defined in
 
-[index.ts:54](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L54)
+[index.ts:43](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L43)
 
-___
+***
 
 ### created\_at
 
-• **created\_at**: `number`
+> **created\_at**: `number`
 
 Unix timestamp in seconds
 
 #### Defined in
 
-[index.ts:48](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L48)
+[index.ts:37](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L37)
 
-___
+***
 
 ### id
 
-• **id**: `string`
+> **id**: `string`
 
 Event ID (32-bytes lowercase hex of the sha256 of the serialized event data)
 
 #### Defined in
 
-[index.ts:44](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L44)
+[index.ts:33](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L33)
 
-___
+***
 
 ### kind
 
-• **kind**: `number`
+> **kind**: `number`
 
 Event kind (integer)
 
 #### Defined in
 
-[index.ts:50](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L50)
+[index.ts:39](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L39)
 
-___
+***
 
 ### pubkey
 
-• **pubkey**: `string`
+> **pubkey**: `string`
 
 Event creator's public key (32-bytes lowercase hex)
 
 #### Defined in
 
-[index.ts:46](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L46)
+[index.ts:35](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L35)
 
-___
+***
 
 ### sig
 
-• **sig**: `string`
+> **sig**: `string`
 
 Event signature (64-bytes hex of the schnorr signature of the sha256 hash of the serialized event data)
 
 #### Defined in
 
-[index.ts:56](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L56)
+[index.ts:45](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L45)
 
-___
+***
 
 ### tags
 
-• **tags**: `string`[][]
+> **tags**: `string`[][]
 
 Array of arrays of strings (event tags)
 
 #### Defined in
 
-[index.ts:52](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L52)
+[index.ts:41](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L41)

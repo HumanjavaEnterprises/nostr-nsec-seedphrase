@@ -1,75 +1,69 @@
-[nostr-nsec-seedphrase - v0.4.2](../README.md) / [Exports](../modules.md) / KeyPair
+[**nostr-nsec-seedphrase v0.6.0**](../README.md)
+
+***
+
+[nostr-nsec-seedphrase](../globals.md) / KeyPair
 
 # Interface: KeyPair
 
 Represents a Nostr key pair with associated formats
 
-## Table of contents
-
-### Properties
-
-- [npub](KeyPair.md#npub)
-- [nsec](KeyPair.md#nsec)
-- [privateKey](KeyPair.md#privatekey)
-- [publicKey](KeyPair.md#publickey)
-- [seedPhrase](KeyPair.md#seedphrase)
-
 ## Properties
 
 ### npub
 
-• **npub**: `string`
+> **npub**: `string`
 
 Public key in bech32 npub format
 
 #### Defined in
 
-[index.ts:32](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L32)
+[index.ts:21](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L21)
 
-___
+***
 
 ### nsec
 
-• **nsec**: `string`
+> **nsec**: `string`
 
 Private key in bech32 nsec format
 
 #### Defined in
 
-[index.ts:30](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L30)
+[index.ts:19](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L19)
 
-___
+***
 
 ### privateKey
 
-• **privateKey**: `string`
+> **privateKey**: `string`
 
 Private key in hex format
 
 #### Defined in
 
-[index.ts:26](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L26)
+[index.ts:15](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L15)
 
-___
+***
 
 ### publicKey
 
-• **publicKey**: `string`
+> **publicKey**: `string`
 
 Public key in hex format
 
 #### Defined in
 
-[index.ts:28](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L28)
+[index.ts:17](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L17)
 
-___
+***
 
 ### seedPhrase
 
-• **seedPhrase**: `string`
+> **seedPhrase**: `string`
 
 BIP39 seed phrase used to generate this key pair
 
 #### Defined in
 
-[index.ts:34](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/82dc31d49db09b8dba7ff55e6136b06bb1b16a3e/src/index.ts#L34)
+[index.ts:23](https://github.com/HumanjavaEnterprises/nostr-nsec-seedphrase/blob/885e04e5180059d4aa901af59d633038a53240cb/src/index.ts#L23)

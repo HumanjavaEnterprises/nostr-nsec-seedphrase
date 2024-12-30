@@ -11,18 +11,34 @@
 
 </div>
 
-A comprehensive TypeScript library for managing Nostr keys with seed phrases, including event signing, verification, and WebSocket utilities.
+A focused TypeScript library for Nostr key management and seedphrase functionality, with seamless integration with nostr-crypto-utils. This package specializes in converting between nsec keys and seed phrases, managing delegations, and handling various key formats.
 
-## Features
+## Core Features
 
-- 🔑 Generate and manage seed phrases for Nostr keys
-- 🔄 Convert between different key formats (hex, nsec, npub)
-- ✍️ Sign and verify messages
-- 📝 Create and verify Nostr events
-- 🌐 WebSocket utilities for Nostr applications
-- 📦 TypeScript support with full type definitions
-- ✅ Comprehensive test coverage
-- 🔒 Secure key management practices
+- 🌱 **Seedphrase Management**
+  - Generate and validate BIP39 seed phrases
+  - Convert between seed phrases and Nostr keys
+  - Secure entropy generation
+  - Multiple language support
+
+- 🔑 **Key Operations**
+  - Convert between formats (hex, nsec, npub)
+  - Validate key pairs
+  - Generate new key pairs
+  - Public key derivation
+
+- 📝 **Delegation Support (NIP-26)**
+  - Create delegation tokens
+  - Time-based conditions
+  - Event kind filtering
+  - Token validation and verification
+  - Expiry management
+
+- 🔄 **Format Conversions**
+  - Hex ↔ nsec
+  - Hex ↔ npub
+  - Seed phrase ↔ key pair
+  - Comprehensive validation
 
 ## NIPs Support Status
 
@@ -31,50 +47,9 @@ A comprehensive TypeScript library for managing Nostr keys with seed phrases, in
 | NIP | Status | Description |
 |-----|--------|-------------|
 | 01 | 🟢 | Basic protocol flow & event signing |
-| 06 | 🟢 | Basic key derivation and event signing |
-| 13 | 🟢 | Proof of Work support |
+| 06 | 🟢 | Basic key derivation from seed phrase |
 | 19 | 🟢 | bech32-encoded entities |
-| 49 | 🟢 | Private Key Generation from Seed Phrases |
-
-### NIP-49 Implementation Details
-
-This package fully implements NIP-49, which specifies the use of BIP-39-style mnemonic seed phrases for generating private keys in the Nostr protocol. Our implementation ensures full compatibility with the NIP-49 specification while providing robust tooling for developers.
-
-#### Key Features & Compliance
-
-1. **Mnemonic Generation & Handling**:
-   - Full BIP-39 compliance for seed phrase generation
-   - Support for multiple languages and word lists
-   - Secure entropy generation for new seed phrases
-
-2. **Standardized Key Derivation**:
-   - Implements the standard derivation path (m/44'/1237'/0'/0/0)
-   - Ensures compatibility with other NIP-49 compliant tools and wallets
-   - Supports custom derivation paths for advanced use cases
-
-3. **Key Format & Encoding**:
-   - Outputs Nostr-compatible `nsec` and `npub` keys
-   - Supports conversion between different key formats
-   - Maintains compatibility with existing Nostr infrastructure
-
-4. **Security & Best Practices**:
-   - Implements secure key generation and storage practices
-   - Provides validation utilities for seed phrases
-   - Follows cryptographic best practices for key management
-
-#### Interoperability
-
-This implementation ensures compatibility with:
-- Nostr wallets implementing NIP-49
-- Key management tools using BIP-39 mnemonics
-- Other Nostr clients and libraries following the specification
-
-#### Validation & Testing
-
-To verify compatibility, the package includes:
-- Comprehensive test suites against NIP-49 specifications
-- Validation against known test vectors
-- Integration tests with common Nostr tools and libraries
+| 26 | 🟢 | Delegated event signing |
 
 ## Installation
 
@@ -82,212 +57,179 @@ To verify compatibility, the package includes:
 npm install nostr-nsec-seedphrase
 ```
 
-## Getting Started
+## Quick Start
 
-This library provides a comprehensive set of tools for managing Nostr keys with seed phrases. Here's how to get started:
-
-### Prerequisites
-
-- Node.js 16.0.0 or later
-- npm or yarn package manager
-
-### Basic Usage
-
-#### Key Generation and Management
+### Generate a New Key Pair with Seed Phrase
 
 ```typescript
-import { generateKeyPairWithSeed, seedPhraseToKeyPair } from 'nostr-nsec-seedphrase';
+import { generateKeyPairWithSeed } from 'nostr-nsec-seedphrase';
 
-// Generate a new key pair with seed phrase
 const keyPair = generateKeyPairWithSeed();
-console.log(keyPair);
-// {
-//   privateKey: '...',
-//   publicKey: '...',
-//   nsec: '...',
-//   npub: '...',
-//   seedPhrase: '...'
-// }
-
-// Convert existing seed phrase to key pair
-const existingKeyPair = seedPhraseToKeyPair('your twelve word seed phrase here');
+console.log({
+  seedPhrase: keyPair.seedPhrase,
+  nsec: keyPair.nsec,
+  npub: keyPair.npub
+});
 ```
 
-### Message Signing and Verification
+### Convert Seed Phrase to Key Pair
 
 ```typescript
-import { signMessage, verifySignature } from 'nostr-nsec-seedphrase';
+import { seedPhraseToKeyPair } from 'nostr-nsec-seedphrase';
 
-// Sign a message
-const signature = await signMessage('Hello Nostr!', keyPair.privateKey);
-
-// Verify a signature
-const isValid = await verifySignature('Hello Nostr!', signature, keyPair.publicKey);
+const keyPair = await seedPhraseToKeyPair('your twelve word seed phrase here');
+console.log({
+  privateKey: keyPair.privateKey, // hex format
+  publicKey: keyPair.publicKey,   // hex format
+  nsec: keyPair.nsec,            // bech32 format
+  npub: keyPair.npub             // bech32 format
+});
 ```
 
-### Event Creation and Verification
+### Create and Verify Delegations
 
 ```typescript
-import { createEvent, verifyEvent } from 'nostr-nsec-seedphrase';
+import { createDelegation, verifyDelegation } from 'nostr-nsec-seedphrase';
 
-// Create a new event
-const event = await createEvent(
-  'Hello Nostr!',  // content
-  1,               // kind (1 = text note)
-  keyPair.privateKey,
-  []               // tags (optional)
+// Create a delegation token
+const delegation = await createDelegation(
+  delegateePublicKey,
+  {
+    kinds: [1, 2], // allowed event kinds
+    since: Math.floor(Date.now() / 1000),
+    until: Math.floor(Date.now() / 1000) + 86400 // 24 hours
+  },
+  delegatorPrivateKey
 );
 
-// Verify an event
-const isValidEvent = await verifyEvent(event);
+// Verify a delegation
+const isValid = await verifyDelegation(
+  delegation,
+  Math.floor(Date.now() / 1000), // current timestamp
+  1 // event kind to verify
+);
 ```
 
-## Key Management Functions
+## Key Features in Detail
 
-### Public Key Generation
+### 1. Seedphrase Management
+
+The library provides comprehensive seedphrase functionality:
+
 ```typescript
-import { getPublicKey } from 'nostr-nsec-seedphrase';
+import { 
+  generateSeedPhrase,
+  validateSeedPhrase,
+  seedPhraseToKeyPair
+} from 'nostr-nsec-seedphrase';
 
-// Generate public key from private key
-const pubkey = getPublicKey(privateKeyHex);
+// Generate a new seed phrase
+const seedPhrase = generateSeedPhrase();
+
+// Validate an existing seed phrase
+const isValid = validateSeedPhrase(seedPhrase);
+
+// Convert seed phrase to key pair
+const keyPair = await seedPhraseToKeyPair(seedPhrase);
 ```
 
-### NIP-19 Encoding/Decoding
+### 2. Key Format Conversions
+
+Easy conversion between different key formats:
+
+```typescript
+import {
+  hexToNsec,
+  hexToNpub,
+  nsecToHex,
+  npubToHex
+} from 'nostr-nsec-seedphrase';
+
+// Convert hex to bech32 formats
+const nsec = hexToNsec(privateKeyHex);
+const npub = hexToNpub(publicKeyHex);
+
+// Convert bech32 to hex formats
+const privateKeyHex = nsecToHex(nsec);
+const publicKeyHex = npubToHex(npub);
+```
+
+### 3. Delegation Management
+
+Comprehensive NIP-26 delegation support:
+
+```typescript
+import {
+  createDelegation,
+  verifyDelegation,
+  isDelegationValid,
+  getDelegationExpiry
+} from 'nostr-nsec-seedphrase';
+
+// Create a delegation with conditions
+const delegation = await createDelegation(delegatee, {
+  kinds: [1], // only text notes
+  since: Math.floor(Date.now() / 1000),
+  until: Math.floor(Date.now() / 1000) + 86400
+}, delegatorPrivateKey);
+
+// Check delegation validity
+const isValid = await isDelegationValid(delegation);
+
+// Get delegation expiry
+const expiry = getDelegationExpiry(delegation);
+```
+
+## Documentation
+
+The library includes comprehensive TypeScript types and JSDoc documentation. You can:
+
+1. View the documentation in your IDE through TypeScript and JSDoc annotations
+2. Generate HTML documentation using:
+   ```bash
+   npm run docs
+   ```
+3. Access the generated documentation in the `docs` directory
+
+### Key Format Utilities
+
 ```typescript
 import { nip19 } from 'nostr-nsec-seedphrase';
 
-// Encode/decode public keys (npub)
-const npub = nip19.npubEncode(pubkeyHex);
-const pubkey = nip19.npubDecode(npub);
+// Encode/decode public keys
+const npub = nip19.npubEncode(hexPublicKey);
+const hexPubkey = nip19.npubDecode(npub);
 
-// Encode/decode private keys (nsec)
-const nsec = nip19.nsecEncode(privkeyHex);
-const privkey = nip19.nsecDecode(nsec);
+// Encode/decode private keys
+const nsec = nip19.nsecEncode(hexPrivateKey);
+const hexPrivkey = nip19.nsecDecode(nsec);
 
-// Encode/decode event IDs (note)
-const note = nip19.noteEncode(eventIdHex);
-const eventId = nip19.noteDecode(note);
+// Encode/decode event IDs
+const note = nip19.noteEncode(eventId);
+const hexEventId = nip19.noteDecode(note);
 ```
 
-## API Reference
+## Integration with nostr-crypto-utils
 
-### Key Management
-- `generateKeyPairWithSeed()`: Generate a new key pair with seed phrase
-- `seedPhraseToKeyPair(seedPhrase: string)`: Convert seed phrase to key pair
-- `fromHex(privateKeyHex: string)`: Create key pair from hex private key
-- `validateSeedPhrase(seedPhrase: string)`: Validate a seed phrase
+This package is designed to work seamlessly with nostr-crypto-utils:
 
-### Format Conversion
-- `nsecToHex(nsec: string)`: Convert nsec to hex format
-- `npubToHex(npub: string)`: Convert npub to hex format
-- `hexToNsec(privateKeyHex: string)`: Convert hex to nsec format
-- `hexToNpub(publicKeyHex: string)`: Convert hex to npub format
-
-### Signing and Verification
-- `signMessage(message: string, privateKey: string)`: Sign a message
-- `verifySignature(message: string, signature: string, publicKey: string)`: Verify a signature
-- `createEvent(content: string, kind: number, privateKey: string, tags?: string[][])`: Create a Nostr event
-- `verifyEvent(event: NostrEvent)`: Verify a Nostr event
-
-## Development
-
-### Setting Up Development Environment
-
-1. Clone the repository
-```bash
-git clone https://github.com/humanjavaenterprises/nostr-nsec-seedphrase.git
-cd nostr-nsec-seedphrase
-```
-
-2. Install dependencies
-```bash
-npm install
-```
-
-3. Build the project
-```bash
-npm run build
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-```
-
-### Code Style
-
-This project uses Prettier for code formatting. Format your code before committing:
-
-```bash
-npm run format
-```
+- Uses compatible key formats and types
+- Leverages nostr-crypto-utils for cryptographic operations
+- Maintains consistent error handling and validation
 
 ## Security Considerations
 
-- Always keep your seed phrases and private keys secure
-- Never share your private keys or seed phrases
-- Be cautious when using this library in a browser environment
-- Consider using a hardware wallet for additional security
-- Validate all inputs and handle errors appropriately
-
-## Recent Updates
-
-### v0.5.0
-- 🔧 Fixed Bech32 mocking in test suite
-- 🔄 Improved signature verification consistency
-- 🎯 Enhanced key pair generation and validation
-- 🛠️ Updated test infrastructure for better reliability
-- 📦 Streamlined dependency mocking system
-
-### v0.4.0
-- 📚 Added comprehensive documentation and examples
-- 📝 Added Code of Conduct
-- 🔍 Enhanced development setup instructions
-- 🛡️ Added security considerations section
-
-### v0.3.0
-- 🔧 Enhanced module resolution for better compatibility
-- ✨ Improved testing infrastructure and mocks
-- 📝 Enhanced TypeScript support and configurations
-- 🔒 Enhanced cryptographic functionality
-- 🎯 Updated ESLint and TypeScript configurations
-
-### v0.2.0
-- 🔧 Fixed HMAC configuration for secp256k1
-- ✅ Added comprehensive test coverage
-- 🎯 Improved TypeScript types
-- 📚 Enhanced documentation
+- Never share or expose private keys or seed phrases
+- Always validate input seed phrases and keys
+- Use secure entropy sources for key generation
+- Implement proper key storage practices
+- Regularly rotate delegation tokens
+- Set appropriate expiry times for delegations
 
 ## Contributing
 
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Before contributing:
-- Read our [Code of Conduct](CODE_OF_CONDUCT.md)
-- Check our [Contributing Guidelines](.github/CONTRIBUTING.md)
-- Review our [Security Policy](SECURITY.md)
-- Search [existing issues](https://github.com/humanjavaenterprises/nostr-nsec-seedphrase/issues) before creating a new one
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
-[MIT](LICENSE)
-
-## Author
-
-[Vergel Evans](https://github.com/vergelevans)
-
----
-<div align="center">
-Made with ❤️ by <a href="https://github.com/humanjavaenterprises">Humanjava Enterprises</a>
-</div>
+MIT License - see the [LICENSE](LICENSE) file for details.

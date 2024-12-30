@@ -12,11 +12,25 @@
   "readme": "README.md",
   "categorizeByGroup": true,
   "categoryOrder": [
+    "Core",
+    "BIPs",
+    "NIPs",
     "Key Management",
     "Seed Phrase",
     "Event Operations",
-    "Message Handling",
+    "Cryptography",
     "Types",
+    "Utils",
     "*"
-  ]
+  ],
+  "navigationLinks": {
+    "GitHub": "https://github.com/humanjavaenterprises/nostr-nsec-seedphrase"
+  },
+  "sidebarLinks": {
+    "API": "modules.md"
+  },
+  "validation": {
+    "invalidLink": true,
+    "notDocumented": true
+  }
 }

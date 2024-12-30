@@ -3,18 +3,8 @@ import * as secp256k1 from "@noble/secp256k1";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import { sha256 } from "@noble/hashes/sha256";
 import { hmac } from "@noble/hashes/hmac";
-import { pino } from "pino";
 import { bech32 } from "bech32";
-
-const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-    },
-  },
-});
+import { logger } from "./utils/logger.js";
 
 /**
  * Represents a Nostr key pair with associated formats
@@ -110,10 +100,10 @@ export function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array {
  * console.log(isValid); // true
  */
 export function validateSeedPhrase(seedPhrase: string): boolean {
-  console.log({ seedPhrase }, "Validating seed phrase");
-  console.log({ seedPhrase }, "Input being validated");
+  logger.log({ seedPhrase }, "Validating seed phrase");
+  logger.log({ seedPhrase }, "Input being validated");
   const isValid = validateMnemonic(seedPhrase);
-  console.log({ isValid }, "Validated seed phrase");
+  logger.log({ isValid }, "Validated seed phrase");
   return Boolean(isValid);
 }
 
@@ -152,7 +142,7 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
       seedPhrase,
     };
   } catch (error) {
-    console.error("Failed to create key pair from seed phrase:", error);
+    logger.error("Failed to create key pair from seed phrase:", error);
     throw error;
   }
 }
@@ -206,7 +196,7 @@ export function fromHex(privateKeyHex: string): KeyPair {
       seedPhrase: "", // No seed phrase for hex-imported keys
     };
   } catch (error) {
-    console.error("Failed to create key pair from hex:", error);
+    logger.error("Failed to create key pair from hex:", error);
     throw error;
   }
 }
@@ -225,21 +215,32 @@ export function getPublicKey(privateKey: string): string {
     const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
     return bytesToHex(publicKeyBytes);
   } catch (error) {
-    console.error("Failed to derive public key from private key:", privateKey);
+    logger.error("Failed to derive public key from private key:", privateKey);
     throw error;
   }
 }
 
 /**
  * NIP-19 encoding and decoding functions
+ * @namespace
  */
 export const nip19 = {
+  /**
+   * Encodes a public key into npub format
+   * @param {string} pubkey - The hex-encoded public key
+   * @returns {string} The bech32-encoded npub string
+   */
   npubEncode(pubkey: string): string {
     const data = hexToBytes(pubkey);
     const words = bech32.toWords(Uint8Array.from(data));
     return bech32.encode("npub", words, 1000);
   },
 
+  /**
+   * Decodes an npub string to hex format
+   * @param {string} npub - The bech32-encoded npub string
+   * @returns {string} The hex-encoded public key
+   */
   npubDecode(npub: string): string {
     const { prefix, words } = bech32.decode(npub, 1000);
     if (prefix !== "npub") throw new Error("Invalid npub: wrong prefix");
@@ -247,12 +248,22 @@ export const nip19 = {
     return bytesToHex(data instanceof Uint8Array ? data : Uint8Array.from(data));
   },
 
+  /**
+   * Encodes a private key into nsec format
+   * @param {string} privkey - The hex-encoded private key
+   * @returns {string} The bech32-encoded nsec string
+   */
   nsecEncode(privkey: string): string {
     const data = hexToBytes(privkey);
     const words = bech32.toWords(Uint8Array.from(data));
     return bech32.encode("nsec", words, 1000);
   },
 
+  /**
+   * Decodes an nsec string to hex format
+   * @param {string} nsec - The bech32-encoded nsec string
+   * @returns {string} The hex-encoded private key
+   */
   nsecDecode(nsec: string): string {
     const { prefix, words } = bech32.decode(nsec, 1000);
     if (prefix !== "nsec") throw new Error("Invalid nsec: wrong prefix");
@@ -260,12 +271,22 @@ export const nip19 = {
     return bytesToHex(data instanceof Uint8Array ? data : Uint8Array.from(data));
   },
 
+  /**
+   * Encodes an event ID into note format
+   * @param {string} eventId - The hex-encoded event ID
+   * @returns {string} The bech32-encoded note string
+   */
   noteEncode(eventId: string): string {
     const data = hexToBytes(eventId);
     const words = bech32.toWords(Uint8Array.from(data));
     return bech32.encode("note", words, 1000);
   },
 
+  /**
+   * Decodes a note string to hex format
+   * @param {string} note - The bech32-encoded note string
+   * @returns {string} The hex-encoded event ID
+   */
   noteDecode(note: string): string {
     const { prefix, words } = bech32.decode(note, 1000);
     if (prefix !== "note") throw new Error("Invalid note: wrong prefix");
@@ -273,6 +294,13 @@ export const nip19 = {
     return bytesToHex(data instanceof Uint8Array ? data : Uint8Array.from(data));
   },
 
+  /**
+   * Decodes any bech32-encoded Nostr entity
+   * @param {string} bech32str - The bech32-encoded string
+   * @returns {{ type: string; data: Uint8Array }} Object containing the decoded type and data
+   * @property {string} type - The type of the decoded entity (npub, nsec, or note)
+   * @property {Uint8Array} data - The raw decoded data
+   */
   decode(bech32str: string): { type: string; data: Uint8Array } {
     const { prefix, words } = bech32.decode(bech32str, 1000);
     const data = bech32.fromWords(words);
@@ -282,87 +310,6 @@ export const nip19 = {
     };
   }
 };
-
-/**
- * Converts a bech32 nsec private key to hex format
- * @param {string} nsec - The bech32-encoded nsec private key
- * @returns {string} The hex-encoded private key
- * @throws {Error} If the nsec key is invalid
- * @example
- * const hex = nsecToHex("nsec1...");
- * console.log(hex); // "1234567890abcdef..."
- */
-export function nsecToHex(nsec: string): string {
-  try {
-    const hexPrivateKey = nip19.nsecDecode(nsec);
-    console.log("Converted nsec to hex");
-    return hexPrivateKey;
-  } catch (error) {
-    console.error("Failed to convert nsec to hex:", error);
-    throw error;
-  }
-}
-
-/**
- * Converts a bech32 npub public key to hex format
- * @param {string} npub - The bech32-encoded npub public key
- * @returns {string} The hex-encoded public key
- * @throws {Error} If the npub key is invalid
- * @example
- * const hex = npubToHex("npub1...");
- * console.log(hex); // "1234567890abcdef..."
- */
-export function npubToHex(npub: string): string {
-  try {
-    const { type, data } = nip19.decode(npub);
-    if (type !== "npub") {
-      throw new Error("Invalid npub format");
-    }
-    console.log("Converted npub to hex");
-    return bytesToHex(data);
-  } catch (error) {
-    console.error("Failed to convert npub to hex:", error);
-    throw error;
-  }
-}
-
-/**
- * Converts a hex public key to bech32 npub format
- * @param {string} publicKeyHex - The hex-encoded public key
- * @returns {string} The bech32-encoded npub public key
- * @throws {Error} If the public key is invalid
- * @example
- * const npub = hexToNpub("1234567890abcdef...");
- * console.log(npub); // "npub1..."
- */
-export function hexToNpub(publicKeyHex: string): string {
-  try {
-    console.log("Converting hex to npub");
-    return nip19.npubEncode(publicKeyHex);
-  } catch (error) {
-    console.error("Failed to convert hex to npub:", error);
-    throw error;
-  }
-}
-
-/**
- * Converts a hex private key to bech32 nsec format
- * @param {string} privateKeyHex - The hex-encoded private key
- * @returns {string} The bech32-encoded nsec private key
- * @throws {Error} If the private key is invalid
- * @example
- * const nsec = hexToNsec("1234567890abcdef...");
- * console.log(nsec); // "nsec1..."
- */
-export function hexToNsec(privateKeyHex: string): string {
-  try {
-    console.log("Converting hex to nsec");
-    return nip19.nsecEncode(privateKeyHex);
-  } catch (error) {
-    console.error("Failed to convert hex to nsec:", error);
-    throw error;
-  }
-}
 
 /**
  * Calculates the event hash/ID according to the Nostr protocol
@@ -406,10 +353,10 @@ export async function signEvent(
       hexToBytes(eventHash),
       hexToBytes(privateKey),
     );
-    console.log("Event signed successfully");
+    logger.log("Event signed successfully");
     return bytesToHex(signature.toCompactRawBytes());
   } catch (error) {
-    console.error("Failed to sign event:", error);
+    logger.error("Failed to sign event:", error);
     throw error;
   }
 }
@@ -425,24 +372,24 @@ export async function signEvent(
 export async function verifyEvent(event: NostrEvent): Promise<boolean> {
   try {
     if (!event.id || !event.pubkey || !event.sig) {
-      console.log("Invalid event: missing required fields");
+      logger.log("Invalid event: missing required fields");
       return false;
     }
 
     const hash = getEventHash(event);
     if (hash !== event.id) {
-      console.log("Event hash mismatch");
+      logger.log("Event hash mismatch");
       return false;
     }
 
-    console.log("Verifying event signature");
+    logger.log("Verifying event signature");
     return await secp256k1.verify(
       hexToBytes(event.sig),
       hexToBytes(hash),
       hexToBytes(event.pubkey),
     );
   } catch (error) {
-    console.error("Failed to verify event:", error);
+    logger.error("Failed to verify event:", error);
     throw error;
   }
 }
@@ -479,8 +426,8 @@ export function configureHMAC(): void {
     hmacSha256Sync: hmacSyncFunction,
   };
 
-  console.log("Configured HMAC for secp256k1");
-  console.log(
+  logger.log("Configured HMAC for secp256k1");
+  logger.log(
     "secp256k1.utils after configuration:",
     (secp256k1 as any).utils,
   );
@@ -522,7 +469,7 @@ export async function createEvent(
   const id = getEventHash(event);
   const sig = await signEvent(event, privateKey);
 
-  console.log("Created new Nostr event");
+  logger.log("Created new Nostr event");
   return {
     ...event,
     id,
@@ -553,7 +500,7 @@ export function seedPhraseToPrivateKey(seedPhrase: string): string {
  * console.log(nsec); // "nsec1..."
  */
 export function privateKeyToNsec(privateKey: string): string {
-  return hexToNsec(privateKey);
+  return nip19.nsecEncode(privateKey);
 }
 
 /**
@@ -568,7 +515,7 @@ export function privateKeyToNsec(privateKey: string): string {
 export function privateKeyToNpub(privateKey: string): string {
   const privateKeyBytes = hexToBytes(privateKey);
   const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
-  return hexToNpub(bytesToHex(publicKey));
+  return nip19.npubEncode(bytesToHex(publicKey));
 }
 
 /**
@@ -577,11 +524,79 @@ export function privateKeyToNpub(privateKey: string): string {
  * @returns {string} The hex-encoded private key
  * @throws {Error} If the nsec key is invalid
  * @example
- * const hex = nsecToPrivateKey("nsec1...");
+ * const hex = nsecToHex("nsec1...");
  * console.log(hex); // "1234567890abcdef..."
  */
-export function nsecToPrivateKey(nsec: string): string {
-  return nsecToHex(nsec);
+export function nsecToHex(nsec: string): string {
+  try {
+    const hexPrivateKey = nip19.nsecDecode(nsec);
+    logger.log("Converted nsec to hex");
+    return hexPrivateKey;
+  } catch (error) {
+    logger.error("Failed to convert nsec to hex:", error);
+    throw error;
+  }
+}
+
+/**
+ * Converts a bech32 npub public key to hex format
+ * @param {string} npub - The bech32-encoded npub public key
+ * @returns {string} The hex-encoded public key
+ * @throws {Error} If the npub key is invalid
+ * @example
+ * const hex = npubToHex("npub1...");
+ * console.log(hex); // "1234567890abcdef..."
+ */
+export function npubToHex(npub: string): string {
+  try {
+    const { type, data } = nip19.decode(npub);
+    if (type !== "npub") {
+      throw new Error("Invalid npub format");
+    }
+    logger.log("Converted npub to hex");
+    return bytesToHex(data);
+  } catch (error) {
+    logger.error("Failed to convert npub to hex:", error);
+    throw error;
+  }
+}
+
+/**
+ * Converts a hex public key to bech32 npub format
+ * @param {string} publicKeyHex - The hex-encoded public key
+ * @returns {string} The bech32-encoded npub public key
+ * @throws {Error} If the public key is invalid
+ * @example
+ * const npub = hexToNpub("1234567890abcdef...");
+ * console.log(npub); // "npub1..."
+ */
+export function hexToNpub(publicKeyHex: string): string {
+  try {
+    logger.log("Converting hex to npub");
+    return nip19.npubEncode(publicKeyHex);
+  } catch (error) {
+    logger.error("Failed to convert hex to npub:", error);
+    throw error;
+  }
+}
+
+/**
+ * Converts a hex private key to bech32 nsec format
+ * @param {string} privateKeyHex - The hex-encoded private key
+ * @returns {string} The bech32-encoded nsec private key
+ * @throws {Error} If the private key is invalid
+ * @example
+ * const nsec = hexToNsec("1234567890abcdef...");
+ * console.log(nsec); // "nsec1..."
+ */
+export function hexToNsec(privateKeyHex: string): string {
+  try {
+    logger.log("Converting hex to nsec");
+    return nip19.nsecEncode(privateKeyHex);
+  } catch (error) {
+    logger.error("Failed to convert hex to nsec:", error);
+    throw error;
+  }
 }
 
 /**
@@ -602,10 +617,10 @@ export async function signMessage(
     const messageBytes = new TextEncoder().encode(message);
     const messageHash = sha256(messageBytes);
     const signature = await secp256k1.sign(messageHash, hexToBytes(privateKey));
-    console.log("Message signed successfully");
+    logger.log("Message signed successfully");
     return bytesToHex(signature.toCompactRawBytes());
   } catch (error) {
-    console.error("Failed to sign message:", error);
+    logger.error("Failed to sign message:", error);
     throw error;
   }
 }
@@ -628,14 +643,27 @@ export async function verifySignature(
   try {
     const messageBytes = new TextEncoder().encode(message);
     const messageHash = sha256(messageBytes);
-    console.log("Verifying message signature");
+    logger.log("Verifying message signature");
     return await secp256k1.verify(
       hexToBytes(signature),
       messageHash,
       hexToBytes(publicKey),
     );
   } catch (error) {
-    console.error("Failed to verify signature:", error);
+    logger.error("Failed to verify signature:", error);
     throw error;
   }
+}
+
+/**
+ * Converts a bech32 nsec private key to hex format
+ * @param {string} nsec - The bech32-encoded nsec private key
+ * @returns {string} The hex-encoded private key
+ * @throws {Error} If the nsec key is invalid
+ * @example
+ * const hex = nsecToPrivateKey("nsec1...");
+ * console.log(hex); // "1234567890abcdef..."
+ */
+export function nsecToPrivateKey(nsec: string): string {
+  return nip19.nsecDecode(nsec);
 }
