@@ -4,10 +4,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build output
-dist/
-build/
+# Build artifacts
 *.tsbuildinfo
+*.tgz
 
 # IDE and editor files
 .idea/
@@ -23,3 +22,6 @@ coverage/
 .env
 .env.local
 .env.*.local
+
+# Project specific
+CHECKLIST.md
