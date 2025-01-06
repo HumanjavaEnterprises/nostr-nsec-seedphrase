@@ -9,7 +9,7 @@
 
 import { logger } from '../utils/logger.js';
 import { npubEncode, nsecEncode, noteEncode, decode as nip19Decode } from 'nostr-crypto-utils';
-import type { Nip19Data } from 'nostr-crypto-utils';
+import type { Nip19DataType } from 'nostr-crypto-utils';
 
 /**
  * Encodes a public key into npub format
@@ -75,11 +75,11 @@ export function hexToNote(hex: string): string {
  * const result = decode('npub1...');
  * returns { type: 'npub', data: '...' }
  */
-export function decode(str: string): Nip19Data {
+export function decode(str: string): { type: Nip19DataType; data: string } {
   try {
     return nip19Decode(str);
   } catch (error) {
-    logger.error({ error, str }, 'Failed to decode bech32-encoded string');
+    logger.error({ error, str }, 'Failed to decode bech32 string');
     throw error;
   }
 }

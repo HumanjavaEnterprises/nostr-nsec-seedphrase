@@ -26,8 +26,8 @@ type CustomLogger = Logger & {
   log: (obj: string | Record<string, unknown>, msg?: string) => void;
 };
 
-// Create the logger instance with proper ESM/CJS compatibility
-const baseLogger = (pino.default || pino)(options) as Logger;
+// Create the logger instance
+const baseLogger = pino(options) as Logger;
 
 // Create the custom logger instance
 const logger = baseLogger as CustomLogger;

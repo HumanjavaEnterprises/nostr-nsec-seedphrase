@@ -8,11 +8,12 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js"
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p tsconfig.cjs.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -55,12 +56,13 @@
   },
   "homepage": "https://github.com/humanjavaenterprises/nostr-nsec-seedphrase#readme",
   "dependencies": {
-    "@noble/hashes": "^1.3.3",
+    "@noble/curves": "^1.3.0",
+    "@noble/hashes": "^1.3.2",
     "@noble/secp256k1": "^2.1.0",
     "@scure/base": "^1.2.1",
     "bech32": "^2.0.0",
     "bip39": "^3.1.0",
-    "nostr-crypto-utils": "^0.4.5",
+    "nostr-crypto-utils": "file:../nostr-crypto-utils",
     "pino": "^8.17.2"
   },
   "devDependencies": {

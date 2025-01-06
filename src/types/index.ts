@@ -15,5 +15,5 @@ export type {
   PublicKeyDetails
 } from './keys.js';
 
-// Import and re-export Nip19Data type from nostr-crypto-utils
-export type { Nip19Data } from 'nostr-crypto-utils';
+// Import and re-export NIP-19 type from nostr-crypto-utils
+export type { Nip19DataType } from 'nostr-crypto-utils';
