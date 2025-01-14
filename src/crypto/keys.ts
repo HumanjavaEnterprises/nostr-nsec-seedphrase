@@ -63,7 +63,7 @@ export function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array {
     }
     return hexToBytes(mnemonicToEntropy(seedPhrase));
   } catch (error) {
-    logger.error('Failed to get entropy from seed phrase:', error);
+    logger.error('Failed to get entropy from seed phrase:', error?.toString());
     throw error;
   }
 }
@@ -103,7 +103,7 @@ export async function seedPhraseToKeyPair(seedPhrase: string): Promise<KeyPair> 
       seedPhrase,
     };
   } catch (error) {
-    logger.error('Failed to create key pair from seed phrase:', error);
+    logger.error('Failed to convert seed phrase to key pair:', error?.toString());
     throw error;
   }
 }
@@ -120,7 +120,7 @@ export function derivePrivateKey(entropy: Uint8Array): string {
     privateKeyBytes = sha256(privateKeyBytes);
     return bytesToHex(privateKeyBytes);
   } catch (error) {
-    logger.error('Failed to derive private key:', error);
+    logger.error('Failed to derive private key:', error?.toString());
     throw new Error('Failed to derive private key');
   }
 }
@@ -155,7 +155,7 @@ export async function fromHex(privateKeyHex: string): Promise<KeyPair> {
       seedPhrase: '', // No seed phrase for hex-imported keys
     };
   } catch (error) {
-    logger.error('Failed to create key pair from hex:', error);
+    logger.error('Failed to create key pair from hex:', error?.toString());
     throw error;
   }
 }
@@ -193,7 +193,7 @@ export async function validateKeyPair(
       isValid: true,
     };
   } catch (error) {
-    logger.error('Failed to validate key pair:', error);
+    logger.error('Failed to validate key pair:', error?.toString());
     return {
       isValid: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -211,7 +211,7 @@ export function validatePublicKey(publicKey: string): boolean {
     const bytes = hexToBytes(publicKey);
     return bytes.length === 32 || bytes.length === 33;
   } catch (error) {
-    logger.error('Failed to validate public key:', error);
+    logger.error('Failed to validate public key:', error?.toString());
     return false;
   }
 }

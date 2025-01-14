@@ -86,7 +86,7 @@ export async function createDelegation(
       signature: bytesToHex(signature),
     };
   } catch (error) {
-    logger.error('Failed to create delegation token:', error);
+    logger.error('Failed to create delegation token:', error?.toString());
     throw error;
   }
 }
@@ -135,8 +135,11 @@ async function verifyDelegation(token: string, now?: number): Promise<Validation
       error: isValid ? undefined : 'Invalid delegation signature',
     };
   } catch (error) {
-    logger.error('Failed to verify delegation:', error);
-    return { isValid: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    logger.error('Failed to verify delegation:', error?.toString());
+    return {
+      isValid: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 }
 

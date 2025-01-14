@@ -55,7 +55,7 @@ async function createDelegation(delegatee, conditions, delegatorPrivateKey) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to create delegation token:', error);
+        logger_js_1.logger.error('Failed to create delegation token:', error?.toString());
         throw error;
     }
 }
@@ -93,8 +93,11 @@ async function verifyDelegation(token, now) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to verify delegation:', error);
-        return { isValid: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        logger_js_1.logger.error('Failed to verify delegation:', error?.toString());
+        return {
+            isValid: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
     }
 }
 /**

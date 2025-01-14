@@ -1,11 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.stringToBytes = stringToBytes;
 exports.bytesToString = bytesToString;
 exports.hexToBase64 = hexToBase64;
 exports.base64ToHex = base64ToHex;
 const utils_1 = require("@noble/hashes/utils");
-const logger_js_1 = require("./logger.js");
+const logger_js_1 = __importDefault(require("./logger.js"));
 /**
  * Converts a string to Uint8Array using UTF-8 encoding
  * @param {string} str - The string to convert
@@ -16,7 +19,7 @@ function stringToBytes(str) {
         return new TextEncoder().encode(str);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to convert string to bytes:', error);
+        logger_js_1.default.error('Failed to convert string to bytes:', error?.toString());
         throw new Error('Failed to convert string to bytes');
     }
 }
@@ -30,7 +33,7 @@ function bytesToString(bytes) {
         return new TextDecoder().decode(bytes);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to convert bytes to string:', error);
+        logger_js_1.default.error('Failed to convert bytes to string:', error?.toString());
         throw new Error('Failed to convert bytes to string');
     }
 }
@@ -45,7 +48,7 @@ function hexToBase64(hex) {
         return btoa(String.fromCharCode(...bytes));
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to convert hex to base64:', error);
+        logger_js_1.default.error('Failed to convert hex to base64:', error?.toString());
         throw new Error('Failed to convert hex to base64');
     }
 }
@@ -64,7 +67,7 @@ function base64ToHex(base64) {
         return (0, utils_1.bytesToHex)(bytes);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to convert base64 to hex:', error);
+        logger_js_1.default.error('Failed to convert base64 to hex:', error?.toString());
         throw new Error('Failed to convert base64 to hex');
     }
 }

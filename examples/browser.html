@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nostr NSEC Seedphrase Browser Test</title>
+</head>
+<body>
+    <h1>Nostr NSEC Seedphrase Browser Test</h1>
+    <button onclick="generateKeys()">Generate New Keys</button>
+    <pre id="output"></pre>
+
+    <script src="../dist/browser/nostr-nsec-seedphrase.min.js"></script>
+    <script>
+        function generateKeys() {
+            const output = document.getElementById('output');
+            try {
+                const keyPair = NostrNsecSeedphrase.generateKeyPairWithSeed();
+                output.textContent = JSON.stringify(keyPair, null, 2);
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

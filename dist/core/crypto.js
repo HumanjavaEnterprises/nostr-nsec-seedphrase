@@ -13,11 +13,12 @@ export async function sign(message, privateKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = sha256(messageBytes);
-        const signature = await schnorr.sign(messageHash, privateKey);
+        const messageHashHex = bytesToHex(messageHash);
+        const signature = await schnorr.sign(messageHashHex, privateKey);
         return bytesToHex(signature);
     }
     catch (error) {
-        logger.error('Failed to sign message:', error);
+        logger.error('Failed to sign message:', error?.toString());
         throw new Error('Failed to sign message');
     }
 }
@@ -32,11 +33,12 @@ export async function verify(signature, message, publicKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = sha256(messageBytes);
-        const isValid = await schnorr.verify(hexToBytes(signature), messageHash, publicKey);
+        const messageHashHex = bytesToHex(messageHash);
+        const isValid = await schnorr.verify(hexToBytes(signature), messageHashHex, hexToBytes(publicKey));
         return isValid;
     }
     catch (error) {
-        logger.error('Failed to verify signature:', error);
+        logger.error('Failed to verify signature:', error?.toString());
         return false;
     }
 }
@@ -56,10 +58,10 @@ export async function verifyWithResult(signature, message, publicKey) {
         };
     }
     catch (error) {
-        logger.error('Failed to verify signature:', error);
+        logger.error('Failed to verify with result:', error?.toString());
         return {
             isValid: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error?.toString() || 'Unknown error',
         };
     }
 }
@@ -77,8 +79,8 @@ export async function getSharedSecret(privateKey, publicKey) {
         return sha256(sharedPoint);
     }
     catch (error) {
-        logger.error('Failed to derive shared secret:', error);
-        throw new Error('Failed to derive shared secret');
+        logger.error('Failed to get shared secret:', error?.toString());
+        throw new Error('Failed to get shared secret');
     }
 }
 /**
@@ -118,7 +120,7 @@ export function getEventHash(event) {
         return bytesToHex(hash);
     }
     catch (error) {
-        logger.error('Failed to get event hash:', error);
+        logger.error('Failed to get event hash:', error?.toString());
         throw new Error('Failed to get event hash');
     }
 }
@@ -131,11 +133,11 @@ export function getEventHash(event) {
 export async function signEvent(event, privateKey) {
     try {
         const eventHash = getEventHash(event);
-        const sig = await schnorr.sign(hexToBytes(eventHash), privateKey);
+        const sig = await schnorr.sign(eventHash, privateKey);
         return bytesToHex(sig);
     }
     catch (error) {
-        logger.error('Failed to sign event:', error);
+        logger.error('Failed to sign event:', error?.toString());
         throw new Error('Failed to sign event');
     }
 }
@@ -153,10 +155,10 @@ export async function verifyEvent(event) {
             tags: event.tags,
             content: event.content,
         });
-        return schnorr.verify(hexToBytes(event.sig), hexToBytes(hash), event.pubkey);
+        return schnorr.verify(hexToBytes(event.sig), hash, hexToBytes(event.pubkey));
     }
     catch (error) {
-        logger.error('Failed to verify event:', error);
+        logger.error('Failed to verify event:', error?.toString());
         return false;
     }
 }
@@ -169,11 +171,12 @@ export async function verifyEvent(event) {
 export async function signMessage(message, privateKey) {
     try {
         const messageHash = sha256(new TextEncoder().encode(message));
-        const sig = await schnorr.sign(messageHash, privateKey);
+        const messageHashHex = bytesToHex(messageHash);
+        const sig = await schnorr.sign(messageHashHex, privateKey);
         return bytesToHex(sig);
     }
     catch (error) {
-        logger.error('Failed to sign message:', error);
+        logger.error('Failed to sign message:', error?.toString());
         throw new Error('Failed to sign message');
     }
 }
@@ -187,10 +190,11 @@ export async function signMessage(message, privateKey) {
 export async function verifyMessage(signature, message, publicKey) {
     try {
         const messageHash = sha256(new TextEncoder().encode(message));
-        return await schnorr.verify(hexToBytes(signature), messageHash, publicKey);
+        const messageHashHex = bytesToHex(messageHash);
+        return await schnorr.verify(hexToBytes(signature), messageHashHex, hexToBytes(publicKey));
     }
     catch (error) {
-        logger.error('Failed to verify message:', error);
+        logger.error('Failed to verify message:', error?.toString());
         return false;
     }
 }
@@ -203,7 +207,7 @@ export function configureHMAC() {
         schnorr.utils.hmacSha256Async = hmacSha256Async;
     }
     catch (error) {
-        logger.error('Failed to configure HMAC:', error);
+        logger.error('Failed to configure HMAC:', error?.toString());
         throw new Error('Failed to configure HMAC');
     }
 }

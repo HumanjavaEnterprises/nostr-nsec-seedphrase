@@ -4,7 +4,7 @@ import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import { sha256 } from "@noble/hashes/sha256";
 import { hmac } from "@noble/hashes/hmac";
 import { bech32 } from "bech32";
-import { logger } from "./utils/logger.js";
+import { logger } from "./utils/logger";
 /**
  * Generates a new BIP39 seed phrase
  * @returns {string} A random 12-word BIP39 mnemonic seed phrase
@@ -80,7 +80,7 @@ export function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger.error("Failed to create key pair from seed phrase:", error);
+        logger.error("Failed to create key pair from seed phrase:", error?.toString());
         throw error;
     }
 }
@@ -130,7 +130,7 @@ export function fromHex(privateKeyHex) {
         };
     }
     catch (error) {
-        logger.error("Failed to create key pair from hex:", error);
+        logger.error("Failed to create key pair from hex:", error?.toString());
         throw error;
     }
 }
@@ -149,7 +149,7 @@ export function getPublicKey(privateKey) {
         return bytesToHex(publicKeyBytes);
     }
     catch (error) {
-        logger.error("Failed to derive public key from private key:", privateKey);
+        logger.error("Failed to get public key:", error?.toString());
         throw error;
     }
 }
@@ -279,7 +279,7 @@ export async function signEvent(event, privateKey) {
         return bytesToHex(signature.toCompactRawBytes());
     }
     catch (error) {
-        logger.error("Failed to sign event:", error);
+        logger.error("Failed to sign event:", error?.toString());
         throw error;
     }
 }
@@ -306,7 +306,7 @@ export async function verifyEvent(event) {
         return await secp256k1.verify(hexToBytes(event.sig), hexToBytes(hash), hexToBytes(event.pubkey));
     }
     catch (error) {
-        logger.error("Failed to verify event:", error);
+        logger.error("Failed to verify event:", error?.toString());
         throw error;
     }
 }
@@ -393,7 +393,13 @@ export function seedPhraseToPrivateKey(seedPhrase) {
  * console.log(nsec); // "nsec1..."
  */
 export function privateKeyToNsec(privateKey) {
-    return nip19.nsecEncode(privateKey);
+    try {
+        return nip19.nsecEncode(privateKey);
+    }
+    catch (error) {
+        logger.error("Failed to encode nsec:", error?.toString());
+        throw error;
+    }
 }
 /**
  * Converts a private key to bech32 npub format
@@ -405,9 +411,15 @@ export function privateKeyToNsec(privateKey) {
  * console.log(npub); // "npub1..."
  */
 export function privateKeyToNpub(privateKey) {
-    const privateKeyBytes = hexToBytes(privateKey);
-    const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
-    return nip19.npubEncode(bytesToHex(publicKey));
+    try {
+        const privateKeyBytes = hexToBytes(privateKey);
+        const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
+        return nip19.npubEncode(bytesToHex(publicKey));
+    }
+    catch (error) {
+        logger.error("Failed to encode npub:", error?.toString());
+        throw error;
+    }
 }
 /**
  * Converts a bech32 nsec private key to hex format
@@ -425,7 +437,7 @@ export function nsecToHex(nsec) {
         return hexPrivateKey;
     }
     catch (error) {
-        logger.error("Failed to convert nsec to hex:", error);
+        logger.error("Failed to decode nsec:", error?.toString());
         throw error;
     }
 }
@@ -448,7 +460,7 @@ export function npubToHex(npub) {
         return bytesToHex(data);
     }
     catch (error) {
-        logger.error("Failed to convert npub to hex:", error);
+        logger.error("Failed to decode npub:", error?.toString());
         throw error;
     }
 }
@@ -467,7 +479,7 @@ export function hexToNpub(publicKeyHex) {
         return nip19.npubEncode(publicKeyHex);
     }
     catch (error) {
-        logger.error("Failed to convert hex to npub:", error);
+        logger.error("Failed to encode npub:", error?.toString());
         throw error;
     }
 }
@@ -486,7 +498,7 @@ export function hexToNsec(privateKeyHex) {
         return nip19.nsecEncode(privateKeyHex);
     }
     catch (error) {
-        logger.error("Failed to convert hex to nsec:", error);
+        logger.error("Failed to encode nsec:", error?.toString());
         throw error;
     }
 }
@@ -509,7 +521,7 @@ export async function signMessage(message, privateKey) {
         return bytesToHex(signature.toCompactRawBytes());
     }
     catch (error) {
-        logger.error("Failed to sign message:", error);
+        logger.error("Failed to sign message:", error?.toString());
         throw error;
     }
 }
@@ -531,7 +543,7 @@ export async function verifySignature(message, signature, publicKey) {
         return await secp256k1.verify(hexToBytes(signature), messageHash, hexToBytes(publicKey));
     }
     catch (error) {
-        logger.error("Failed to verify signature:", error);
+        logger.error("Failed to verify signature:", error?.toString());
         throw error;
     }
 }
@@ -545,5 +557,11 @@ export async function verifySignature(message, signature, publicKey) {
  * console.log(hex); // "1234567890abcdef..."
  */
 export function nsecToPrivateKey(nsec) {
-    return nip19.nsecDecode(nsec);
+    try {
+        return nip19.nsecDecode(nsec);
+    }
+    catch (error) {
+        logger.error("Failed to decode nsec:", error?.toString());
+        throw error;
+    }
 }

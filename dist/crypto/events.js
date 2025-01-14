@@ -25,7 +25,7 @@ export function getEventHash(event) {
         return bytesToHex(sha256(new TextEncoder().encode(serialized)));
     }
     catch (error) {
-        logger.error('Failed to calculate event hash:', error);
+        logger.error('Failed to calculate event hash:', error?.toString());
         throw error;
     }
 }
@@ -65,7 +65,7 @@ export async function signEvent(event, privateKey) {
         };
     }
     catch (error) {
-        logger.error('Failed to sign event:', error);
+        logger.error('Failed to sign event:', error?.toString());
         throw error;
     }
 }
@@ -97,7 +97,7 @@ export async function verifyEvent(event) {
         };
     }
     catch (error) {
-        logger.error('Failed to verify event:', error);
+        logger.error('Failed to verify event:', error?.toString());
         return {
             isValid: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -120,7 +120,7 @@ export async function signMessage(message, privateKey) {
         return bytesToHex(signature);
     }
     catch (error) {
-        logger.error('Failed to sign message:', error);
+        logger.error('Failed to sign message:', error?.toString());
         throw error;
     }
 }
@@ -143,7 +143,7 @@ export async function verifySignature(message, signature, publicKey) {
         };
     }
     catch (error) {
-        logger.error('Failed to verify signature:', error);
+        logger.error('Failed to verify signature:', error?.toString());
         return {
             isValid: false,
             error: error instanceof Error ? error.message : 'Unknown error',
