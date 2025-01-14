@@ -180,6 +180,35 @@ const isValid = await isDelegationValid(delegation);
 const expiry = getDelegationExpiry(delegation);
 ```
 
+## Module Support
+
+This package supports both ESM and CommonJS usage:
+
+### ESM (recommended)
+```typescript
+import { generateKeyPairWithSeed } from 'nostr-nsec-seedphrase';
+```
+
+### CommonJS
+```javascript
+const { generateKeyPairWithSeed } = require('nostr-nsec-seedphrase');
+```
+
+### Webpack Usage
+The package is fully compatible with webpack for client-side applications. Add to your webpack config:
+
+```javascript
+module.exports = {
+  resolve: {
+    fallback: {
+      "crypto": require.resolve("crypto-browserify"),
+      "stream": require.resolve("stream-browserify"),
+      "buffer": require.resolve("buffer/")
+    }
+  }
+};
+```
+
 ## Documentation
 
 The library includes comprehensive TypeScript types and JSDoc documentation. You can:
@@ -189,7 +218,11 @@ The library includes comprehensive TypeScript types and JSDoc documentation. You
    ```bash
    npm run docs
    ```
-3. Access the generated documentation in the `docs` directory
+3. View the generated documentation locally:
+   ```bash
+   npm run docs:serve
+   ```
+4. Access the generated documentation in the `docs` directory
 
 ### Key Format Utilities
 
