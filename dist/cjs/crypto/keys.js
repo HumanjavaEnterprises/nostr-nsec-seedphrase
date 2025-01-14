@@ -68,7 +68,7 @@ function getEntropyFromSeedPhrase(seedPhrase) {
         return (0, utils_1.hexToBytes)((0, bip39_1.mnemonicToEntropy)(seedPhrase));
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to get entropy from seed phrase:', error);
+        logger_js_1.logger.error('Failed to get entropy from seed phrase:', error?.toString());
         throw error;
     }
 }
@@ -105,7 +105,7 @@ async function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to create key pair from seed phrase:', error);
+        logger_js_1.logger.error('Failed to convert seed phrase to key pair:', error?.toString());
         throw error;
     }
 }
@@ -122,7 +122,7 @@ function derivePrivateKey(entropy) {
         return (0, utils_1.bytesToHex)(privateKeyBytes);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to derive private key:', error);
+        logger_js_1.logger.error('Failed to derive private key:', error?.toString());
         throw new Error('Failed to derive private key');
     }
 }
@@ -155,7 +155,7 @@ async function fromHex(privateKeyHex) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to create key pair from hex:', error);
+        logger_js_1.logger.error('Failed to create key pair from hex:', error?.toString());
         throw error;
     }
 }
@@ -187,7 +187,7 @@ async function validateKeyPair(publicKey, privateKey) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to validate key pair:', error);
+        logger_js_1.logger.error('Failed to validate key pair:', error?.toString());
         return {
             isValid: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -205,7 +205,7 @@ function validatePublicKey(publicKey) {
         return bytes.length === 32 || bytes.length === 33;
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to validate public key:', error);
+        logger_js_1.logger.error('Failed to validate public key:', error?.toString());
         return false;
     }
 }

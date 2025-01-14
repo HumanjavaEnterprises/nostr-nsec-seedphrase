@@ -30,11 +30,12 @@ async function sign(message, privateKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = (0, sha256_1.sha256)(messageBytes);
-        const signature = await secp256k1_1.schnorr.sign(messageHash, privateKey);
+        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
+        const signature = await secp256k1_1.schnorr.sign(messageHashHex, privateKey);
         return (0, utils_1.bytesToHex)(signature);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to sign message:', error);
+        logger_js_1.default.error('Failed to sign message:', error?.toString());
         throw new Error('Failed to sign message');
     }
 }
@@ -49,11 +50,12 @@ async function verify(signature, message, publicKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = (0, sha256_1.sha256)(messageBytes);
-        const isValid = await secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(signature), messageHash, publicKey);
+        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
+        const isValid = await secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(signature), messageHashHex, (0, utils_1.hexToBytes)(publicKey));
         return isValid;
     }
     catch (error) {
-        logger_js_1.default.error('Failed to verify signature:', error);
+        logger_js_1.default.error('Failed to verify signature:', error?.toString());
         return false;
     }
 }
@@ -73,10 +75,10 @@ async function verifyWithResult(signature, message, publicKey) {
         };
     }
     catch (error) {
-        logger_js_1.default.error('Failed to verify signature:', error);
+        logger_js_1.default.error('Failed to verify with result:', error?.toString());
         return {
             isValid: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error?.toString() || 'Unknown error',
         };
     }
 }
@@ -94,8 +96,8 @@ async function getSharedSecret(privateKey, publicKey) {
         return (0, sha256_1.sha256)(sharedPoint);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to derive shared secret:', error);
-        throw new Error('Failed to derive shared secret');
+        logger_js_1.default.error('Failed to get shared secret:', error?.toString());
+        throw new Error('Failed to get shared secret');
     }
 }
 /**
@@ -135,7 +137,7 @@ function getEventHash(event) {
         return (0, utils_1.bytesToHex)(hash);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to get event hash:', error);
+        logger_js_1.default.error('Failed to get event hash:', error?.toString());
         throw new Error('Failed to get event hash');
     }
 }
@@ -148,11 +150,11 @@ function getEventHash(event) {
 async function signEvent(event, privateKey) {
     try {
         const eventHash = getEventHash(event);
-        const sig = await secp256k1_1.schnorr.sign((0, utils_1.hexToBytes)(eventHash), privateKey);
+        const sig = await secp256k1_1.schnorr.sign(eventHash, privateKey);
         return (0, utils_1.bytesToHex)(sig);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to sign event:', error);
+        logger_js_1.default.error('Failed to sign event:', error?.toString());
         throw new Error('Failed to sign event');
     }
 }
@@ -170,10 +172,10 @@ async function verifyEvent(event) {
             tags: event.tags,
             content: event.content,
         });
-        return secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(event.sig), (0, utils_1.hexToBytes)(hash), event.pubkey);
+        return secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(event.sig), hash, (0, utils_1.hexToBytes)(event.pubkey));
     }
     catch (error) {
-        logger_js_1.default.error('Failed to verify event:', error);
+        logger_js_1.default.error('Failed to verify event:', error?.toString());
         return false;
     }
 }
@@ -186,11 +188,12 @@ async function verifyEvent(event) {
 async function signMessage(message, privateKey) {
     try {
         const messageHash = (0, sha256_1.sha256)(new TextEncoder().encode(message));
-        const sig = await secp256k1_1.schnorr.sign(messageHash, privateKey);
+        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
+        const sig = await secp256k1_1.schnorr.sign(messageHashHex, privateKey);
         return (0, utils_1.bytesToHex)(sig);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to sign message:', error);
+        logger_js_1.default.error('Failed to sign message:', error?.toString());
         throw new Error('Failed to sign message');
     }
 }
@@ -204,10 +207,11 @@ async function signMessage(message, privateKey) {
 async function verifyMessage(signature, message, publicKey) {
     try {
         const messageHash = (0, sha256_1.sha256)(new TextEncoder().encode(message));
-        return await secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(signature), messageHash, publicKey);
+        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
+        return await secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(signature), messageHashHex, (0, utils_1.hexToBytes)(publicKey));
     }
     catch (error) {
-        logger_js_1.default.error('Failed to verify message:', error);
+        logger_js_1.default.error('Failed to verify message:', error?.toString());
         return false;
     }
 }
@@ -220,7 +224,7 @@ function configureHMAC() {
         secp256k1_1.schnorr.utils.hmacSha256Async = hmacSha256Async;
     }
     catch (error) {
-        logger_js_1.default.error('Failed to configure HMAC:', error);
+        logger_js_1.default.error('Failed to configure HMAC:', error?.toString());
         throw new Error('Failed to configure HMAC');
     }
 }

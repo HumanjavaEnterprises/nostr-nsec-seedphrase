@@ -4,7 +4,7 @@ exports.generateSeedPhrase = generateSeedPhrase;
 exports.validateSeedPhrase = validateSeedPhrase;
 exports.getEntropyFromSeedPhrase = getEntropyFromSeedPhrase;
 const bip39_1 = require("bip39");
-const logger_js_1 = require("../utils/logger.js");
+const logger_1 = require("../utils/logger");
 /**
  * Generates a new BIP39 seed phrase
  * @returns {string} The generated seed phrase
@@ -17,7 +17,7 @@ function generateSeedPhrase() {
         return (0, bip39_1.generateMnemonic)();
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to generate seed phrase:', error);
+        logger_1.logger.error('Failed to generate seed phrase:', error instanceof Error ? error.message : String(error));
         throw new Error('Failed to generate seed phrase');
     }
 }
@@ -34,7 +34,7 @@ function validateSeedPhrase(seedPhrase) {
         return (0, bip39_1.validateMnemonic)(seedPhrase);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to validate seed phrase:', error);
+        logger_1.logger.error('Failed to validate seed phrase:', error instanceof Error ? error.message : String(error));
         return false;
     }
 }
@@ -62,7 +62,7 @@ function getEntropyFromSeedPhrase(seedPhrase) {
         return entropyBytes;
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to get entropy from seed phrase:', error);
+        logger_1.logger.error('Failed to get entropy from seed phrase:', error instanceof Error ? error.message : String(error));
         throw new Error('Failed to get entropy from seed phrase');
     }
 }

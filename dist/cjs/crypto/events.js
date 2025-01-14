@@ -33,7 +33,7 @@ function getEventHash(event) {
         return (0, utils_1.bytesToHex)((0, sha256_1.sha256)(new TextEncoder().encode(serialized)));
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to calculate event hash:', error);
+        logger_js_1.logger.error('Failed to calculate event hash:', error?.toString());
         throw error;
     }
 }
@@ -73,7 +73,7 @@ async function signEvent(event, privateKey) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to sign event:', error);
+        logger_js_1.logger.error('Failed to sign event:', error?.toString());
         throw error;
     }
 }
@@ -105,7 +105,7 @@ async function verifyEvent(event) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to verify event:', error);
+        logger_js_1.logger.error('Failed to verify event:', error?.toString());
         return {
             isValid: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -128,7 +128,7 @@ async function signMessage(message, privateKey) {
         return (0, utils_1.bytesToHex)(signature);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to sign message:', error);
+        logger_js_1.logger.error('Failed to sign message:', error?.toString());
         throw error;
     }
 }
@@ -151,7 +151,7 @@ async function verifySignature(message, signature, publicKey) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to verify signature:', error);
+        logger_js_1.logger.error('Failed to verify signature:', error?.toString());
         return {
             isValid: false,
             error: error instanceof Error ? error.message : 'Unknown error',

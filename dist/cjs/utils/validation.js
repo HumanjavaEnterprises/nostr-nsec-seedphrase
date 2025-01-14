@@ -1,10 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isValidHex = isValidHex;
 exports.isValidTimestamp = isValidTimestamp;
 exports.isBase64 = isBase64;
 exports.isStringArray = isStringArray;
-const logger_js_1 = require("./logger.js");
+const logger_js_1 = __importDefault(require("./logger.js"));
 /**
  * Validates a hex string
  * @param {string} hex - The hex string to validate
@@ -22,7 +25,7 @@ function isValidHex(hex, expectedLength) {
         return true;
     }
     catch (error) {
-        logger_js_1.logger.error('Hex validation failed:', error);
+        logger_js_1.default.error('Hex validation failed:', error?.toString());
         return false;
     }
 }
@@ -39,7 +42,7 @@ function isValidTimestamp(timestamp, maxAgeDays = 30) {
         return timestamp > (now - maxAge) && timestamp <= now;
     }
     catch (error) {
-        logger_js_1.logger.error('Timestamp validation failed:', error);
+        logger_js_1.default.error('Timestamp validation failed:', error?.toString());
         return false;
     }
 }
@@ -53,7 +56,7 @@ function isBase64(str) {
         return /^[A-Za-z0-9+/]*={0,2}$/.test(str);
     }
     catch (error) {
-        logger_js_1.logger.error('Base64 validation failed:', error);
+        logger_js_1.default.error('Base64 validation failed:', error?.toString());
         return false;
     }
 }
@@ -67,7 +70,7 @@ function isStringArray(arr) {
         return Array.isArray(arr) && arr.every(item => typeof item === 'string');
     }
     catch (error) {
-        logger_js_1.logger.error('String array validation failed:', error);
+        logger_js_1.default.error('String array validation failed:', error?.toString());
         return false;
     }
 }

@@ -266,3 +266,10 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Version 0.6.5
+- Fixed TypeScript errors related to unknown type assignments across multiple files.
+- Improved error handling by converting error objects to strings before logging.
+- Updated logger imports to use default imports where necessary.
+- Ensured consistent logging practices throughout the codebase.
+- Added a checklist for future reference.

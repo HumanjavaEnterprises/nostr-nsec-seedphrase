@@ -1,5 +1,5 @@
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { logger } from './logger.js';
+import logger from './logger.js';
 
 /**
  * Converts a string to Uint8Array using UTF-8 encoding
@@ -10,7 +10,7 @@ export function stringToBytes(str: string): Uint8Array {
   try {
     return new TextEncoder().encode(str);
   } catch (error) {
-    logger.error('Failed to convert string to bytes:', error);
+    logger.error('Failed to convert string to bytes:', error?.toString());
     throw new Error('Failed to convert string to bytes');
   }
 }
@@ -24,7 +24,7 @@ export function bytesToString(bytes: Uint8Array): string {
   try {
     return new TextDecoder().decode(bytes);
   } catch (error) {
-    logger.error('Failed to convert bytes to string:', error);
+    logger.error('Failed to convert bytes to string:', error?.toString());
     throw new Error('Failed to convert bytes to string');
   }
 }
@@ -39,7 +39,7 @@ export function hexToBase64(hex: string): string {
     const bytes = hexToBytes(hex);
     return btoa(String.fromCharCode(...bytes));
   } catch (error) {
-    logger.error('Failed to convert hex to base64:', error);
+    logger.error('Failed to convert hex to base64:', error?.toString());
     throw new Error('Failed to convert hex to base64');
   }
 }
@@ -58,7 +58,7 @@ export function base64ToHex(base64: string): string {
     }
     return bytesToHex(bytes);
   } catch (error) {
-    logger.error('Failed to convert base64 to hex:', error);
+    logger.error('Failed to convert base64 to hex:', error?.toString());
     throw new Error('Failed to convert base64 to hex');
   }
 }

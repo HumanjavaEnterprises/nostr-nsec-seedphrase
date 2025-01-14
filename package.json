@@ -1,19 +1,24 @@
 {
   "name": "nostr-nsec-seedphrase",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "A comprehensive TypeScript library for Nostr key management with BIP39 seed phrases, supporting both ESM and CommonJS. Implements NIP-01, NIP-06, NIP-19, and NIP-26 with key generation, event signing, bech32 encoding/decoding, and secure cryptographic operations.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "browser": "./dist/browser/nostr-nsec-seedphrase.min.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./dist/browser/nostr-nsec-seedphrase.min.js",
       "import": "./dist/index.js",
       "require": "./dist/cjs/index.js"
     }
   },
   "scripts": {
-    "build": "tsc && tsc -p tsconfig.cjs.json",
+    "build": "npm run build:node && npm run build:browser",
+    "build:node": "tsc && tsc -p tsconfig.cjs.json",
+    "build:browser": "webpack --config webpack.config.js",
+    "build:analyze": "webpack --config webpack.config.js --env analyze=true",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -59,19 +64,27 @@
     "@scure/base": "^1.2.1",
     "bech32": "^2.0.0",
     "bip39": "^3.1.0",
-    "nostr-crypto-utils": "^0.4.10",
+    "nostr-crypto-utils": "^0.4.12",
     "pino": "^8.17.2"
   },
   "devDependencies": {
-    "@types/node": "^20.10.5",
+    "@types/node": "^20.17.12",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
     "eslint": "^8.56.0",
     "prettier": "^3.1.1",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "ts-loader": "^9.5.2",
     "typedoc": "^0.27.6",
     "typedoc-plugin-markdown": "^4.3.3",
     "typescript": "^5.3.3",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "webpack": "^5.97.1",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1"
   },
   "publishConfig": {
     "access": "public"

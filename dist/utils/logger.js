@@ -1,28 +1,36 @@
 /**
  * @module Logger
  * @category Utils
- * @description Enhanced logging utility with support for both ESM and CJS.
+ * @description Enhanced logging utility with support for both browser and Node environments.
  * Provides consistent logging across the application with proper type safety.
  */
-import pino from 'pino';
-/**
- * Configuration options for the logger
- */
-const options = {
-    level: process.env.LOG_LEVEL || 'info'
-};
-// Create the logger instance
-const baseLogger = pino(options);
-// Create the custom logger instance
-const logger = baseLogger;
-// Add log method as an alias for info with enhanced type safety
-logger.log = (obj, msg) => {
-    if (typeof obj === 'string') {
-        logger.info(obj);
+class BrowserLogger {
+    logWithLevel(level, obj, msg) {
+        const consoleMethod = console[level];
+        if (typeof obj === 'string') {
+            consoleMethod(obj);
+        }
+        else {
+            consoleMethod(obj, msg || '');
+        }
     }
-    else {
-        logger.info(obj, msg);
+    error(obj, msg) {
+        this.logWithLevel('error', obj, msg);
     }
-};
+    warn(obj, msg) {
+        this.logWithLevel('warn', obj, msg);
+    }
+    info(obj, msg) {
+        this.logWithLevel('info', obj, msg);
+    }
+    debug(obj, msg) {
+        this.logWithLevel('debug', obj, msg);
+    }
+    log(obj, msg) {
+        this.logWithLevel('log', obj, msg);
+    }
+}
+// Create and export the browser-compatible logger
+const logger = new BrowserLogger();
 export { logger };
 export default logger;

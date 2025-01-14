@@ -61,7 +61,7 @@ const utils_1 = require("@noble/hashes/utils");
 const sha256_1 = require("@noble/hashes/sha256");
 const hmac_1 = require("@noble/hashes/hmac");
 const bech32_1 = require("bech32");
-const logger_js_1 = require("./utils/logger.js");
+const logger_1 = require("./utils/logger");
 /**
  * Generates a new BIP39 seed phrase
  * @returns {string} A random 12-word BIP39 mnemonic seed phrase
@@ -98,10 +98,10 @@ function getEntropyFromSeedPhrase(seedPhrase) {
  * console.log(isValid); // true
  */
 function validateSeedPhrase(seedPhrase) {
-    logger_js_1.logger.log({ seedPhrase }, "Validating seed phrase");
-    logger_js_1.logger.log({ seedPhrase }, "Input being validated");
+    logger_1.logger.log({ seedPhrase }, "Validating seed phrase");
+    logger_1.logger.log({ seedPhrase }, "Input being validated");
     const isValid = (0, bip39_1.validateMnemonic)(seedPhrase);
-    logger_js_1.logger.log({ isValid }, "Validated seed phrase");
+    logger_1.logger.log({ isValid }, "Validated seed phrase");
     return Boolean(isValid);
 }
 /**
@@ -137,7 +137,7 @@ function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to create key pair from seed phrase:", error);
+        logger_1.logger.error("Failed to create key pair from seed phrase:", error?.toString());
         throw error;
     }
 }
@@ -187,7 +187,7 @@ function fromHex(privateKeyHex) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to create key pair from hex:", error);
+        logger_1.logger.error("Failed to create key pair from hex:", error?.toString());
         throw error;
     }
 }
@@ -206,7 +206,7 @@ function getPublicKey(privateKey) {
         return (0, utils_1.bytesToHex)(publicKeyBytes);
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to derive public key from private key:", privateKey);
+        logger_1.logger.error("Failed to get public key:", error?.toString());
         throw error;
     }
 }
@@ -332,11 +332,11 @@ async function signEvent(event, privateKey) {
     try {
         const eventHash = getEventHash(event);
         const signature = await secp256k1.sign((0, utils_1.hexToBytes)(eventHash), (0, utils_1.hexToBytes)(privateKey));
-        logger_js_1.logger.log("Event signed successfully");
+        logger_1.logger.log("Event signed successfully");
         return (0, utils_1.bytesToHex)(signature.toCompactRawBytes());
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to sign event:", error);
+        logger_1.logger.error("Failed to sign event:", error?.toString());
         throw error;
     }
 }
@@ -351,19 +351,19 @@ async function signEvent(event, privateKey) {
 async function verifyEvent(event) {
     try {
         if (!event.id || !event.pubkey || !event.sig) {
-            logger_js_1.logger.log("Invalid event: missing required fields");
+            logger_1.logger.log("Invalid event: missing required fields");
             return false;
         }
         const hash = getEventHash(event);
         if (hash !== event.id) {
-            logger_js_1.logger.log("Event hash mismatch");
+            logger_1.logger.log("Event hash mismatch");
             return false;
         }
-        logger_js_1.logger.log("Verifying event signature");
+        logger_1.logger.log("Verifying event signature");
         return await secp256k1.verify((0, utils_1.hexToBytes)(event.sig), (0, utils_1.hexToBytes)(hash), (0, utils_1.hexToBytes)(event.pubkey));
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to verify event:", error);
+        logger_1.logger.error("Failed to verify event:", error?.toString());
         throw error;
     }
 }
@@ -390,8 +390,8 @@ function configureHMAC() {
         hmacSha256: hmacFunction,
         hmacSha256Sync: hmacSyncFunction,
     };
-    logger_js_1.logger.log("Configured HMAC for secp256k1");
-    logger_js_1.logger.log("secp256k1.utils after configuration:", secp256k1.utils);
+    logger_1.logger.log("Configured HMAC for secp256k1");
+    logger_1.logger.log("secp256k1.utils after configuration:", secp256k1.utils);
 }
 /**
  * Creates a new signed Nostr event
@@ -421,7 +421,7 @@ async function createEvent(content, kind, privateKey, tags = []) {
     };
     const id = getEventHash(event);
     const sig = await signEvent(event, privateKey);
-    logger_js_1.logger.log("Created new Nostr event");
+    logger_1.logger.log("Created new Nostr event");
     return {
         ...event,
         id,
@@ -450,7 +450,13 @@ function seedPhraseToPrivateKey(seedPhrase) {
  * console.log(nsec); // "nsec1..."
  */
 function privateKeyToNsec(privateKey) {
-    return exports.nip19.nsecEncode(privateKey);
+    try {
+        return exports.nip19.nsecEncode(privateKey);
+    }
+    catch (error) {
+        logger_1.logger.error("Failed to encode nsec:", error?.toString());
+        throw error;
+    }
 }
 /**
  * Converts a private key to bech32 npub format
@@ -462,9 +468,15 @@ function privateKeyToNsec(privateKey) {
  * console.log(npub); // "npub1..."
  */
 function privateKeyToNpub(privateKey) {
-    const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
-    const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
-    return exports.nip19.npubEncode((0, utils_1.bytesToHex)(publicKey));
+    try {
+        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
+        const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
+        return exports.nip19.npubEncode((0, utils_1.bytesToHex)(publicKey));
+    }
+    catch (error) {
+        logger_1.logger.error("Failed to encode npub:", error?.toString());
+        throw error;
+    }
 }
 /**
  * Converts a bech32 nsec private key to hex format
@@ -478,11 +490,11 @@ function privateKeyToNpub(privateKey) {
 function nsecToHex(nsec) {
     try {
         const hexPrivateKey = exports.nip19.nsecDecode(nsec);
-        logger_js_1.logger.log("Converted nsec to hex");
+        logger_1.logger.log("Converted nsec to hex");
         return hexPrivateKey;
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to convert nsec to hex:", error);
+        logger_1.logger.error("Failed to decode nsec:", error?.toString());
         throw error;
     }
 }
@@ -501,11 +513,11 @@ function npubToHex(npub) {
         if (type !== "npub") {
             throw new Error("Invalid npub format");
         }
-        logger_js_1.logger.log("Converted npub to hex");
+        logger_1.logger.log("Converted npub to hex");
         return (0, utils_1.bytesToHex)(data);
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to convert npub to hex:", error);
+        logger_1.logger.error("Failed to decode npub:", error?.toString());
         throw error;
     }
 }
@@ -520,11 +532,11 @@ function npubToHex(npub) {
  */
 function hexToNpub(publicKeyHex) {
     try {
-        logger_js_1.logger.log("Converting hex to npub");
+        logger_1.logger.log("Converting hex to npub");
         return exports.nip19.npubEncode(publicKeyHex);
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to convert hex to npub:", error);
+        logger_1.logger.error("Failed to encode npub:", error?.toString());
         throw error;
     }
 }
@@ -539,11 +551,11 @@ function hexToNpub(publicKeyHex) {
  */
 function hexToNsec(privateKeyHex) {
     try {
-        logger_js_1.logger.log("Converting hex to nsec");
+        logger_1.logger.log("Converting hex to nsec");
         return exports.nip19.nsecEncode(privateKeyHex);
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to convert hex to nsec:", error);
+        logger_1.logger.error("Failed to encode nsec:", error?.toString());
         throw error;
     }
 }
@@ -562,11 +574,11 @@ async function signMessage(message, privateKey) {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = (0, sha256_1.sha256)(messageBytes);
         const signature = await secp256k1.sign(messageHash, (0, utils_1.hexToBytes)(privateKey));
-        logger_js_1.logger.log("Message signed successfully");
+        logger_1.logger.log("Message signed successfully");
         return (0, utils_1.bytesToHex)(signature.toCompactRawBytes());
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to sign message:", error);
+        logger_1.logger.error("Failed to sign message:", error?.toString());
         throw error;
     }
 }
@@ -584,11 +596,11 @@ async function verifySignature(message, signature, publicKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = (0, sha256_1.sha256)(messageBytes);
-        logger_js_1.logger.log("Verifying message signature");
+        logger_1.logger.log("Verifying message signature");
         return await secp256k1.verify((0, utils_1.hexToBytes)(signature), messageHash, (0, utils_1.hexToBytes)(publicKey));
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to verify signature:", error);
+        logger_1.logger.error("Failed to verify signature:", error?.toString());
         throw error;
     }
 }
@@ -602,5 +614,11 @@ async function verifySignature(message, signature, publicKey) {
  * console.log(hex); // "1234567890abcdef..."
  */
 function nsecToPrivateKey(nsec) {
-    return exports.nip19.nsecDecode(nsec);
+    try {
+        return exports.nip19.nsecDecode(nsec);
+    }
+    catch (error) {
+        logger_1.logger.error("Failed to decode nsec:", error?.toString());
+        throw error;
+    }
 }
