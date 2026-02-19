@@ -16,6 +16,7 @@ exports.nsecToHex = nsecToHex;
 exports.npubToHex = npubToHex;
 const logger_js_1 = require("../utils/logger.js");
 const nostr_crypto_utils_1 = require("nostr-crypto-utils");
+const { npubEncode, nsecEncode, noteEncode, decode: nip19Decode } = nostr_crypto_utils_1.nip19;
 /**
  * Encodes a public key into npub format
  * @param {string} hex - The hex-encoded public key
@@ -27,7 +28,7 @@ const nostr_crypto_utils_1 = require("nostr-crypto-utils");
  */
 function hexToNpub(hex) {
     try {
-        return (0, nostr_crypto_utils_1.npubEncode)(hex);
+        return npubEncode(hex);
     }
     catch (error) {
         logger_js_1.logger.error({ error, hex }, 'Failed to encode public key to npub');
@@ -46,7 +47,7 @@ function hexToNpub(hex) {
  */
 function hexToNsec(hex) {
     try {
-        return (0, nostr_crypto_utils_1.nsecEncode)(hex);
+        return nsecEncode(hex);
     }
     catch (error) {
         logger_js_1.logger.error({ error, hex }, 'Failed to encode private key to nsec');
@@ -64,7 +65,7 @@ function hexToNsec(hex) {
  */
 function hexToNote(hex) {
     try {
-        return (0, nostr_crypto_utils_1.noteEncode)(hex);
+        return noteEncode(hex);
     }
     catch (error) {
         logger_js_1.logger.error({ error, hex }, 'Failed to encode event ID to note');
@@ -82,7 +83,7 @@ function hexToNote(hex) {
  */
 function decode(str) {
     try {
-        return (0, nostr_crypto_utils_1.decode)(str);
+        return nip19Decode(str);
     }
     catch (error) {
         logger_js_1.logger.error({ error, str }, 'Failed to decode bech32 string');

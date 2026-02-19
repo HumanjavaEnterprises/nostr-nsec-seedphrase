@@ -8,8 +8,10 @@
  */
 
 import { logger } from '../utils/logger.js';
-import { npubEncode, nsecEncode, noteEncode, decode as nip19Decode } from 'nostr-crypto-utils';
-import type { Nip19DataType } from 'nostr-crypto-utils';
+import { nip19 } from 'nostr-crypto-utils';
+
+const { npubEncode, nsecEncode, noteEncode, decode: nip19Decode } = nip19;
+type Nip19DataType = 'npub' | 'nsec' | 'note' | 'nprofile' | 'nevent' | 'naddr' | 'nrelay';
 
 /**
  * Encodes a public key into npub format

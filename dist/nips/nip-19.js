@@ -7,7 +7,8 @@
  * @see https://github.com/nostr-protocol/nips/blob/master/19.md
  */
 import { logger } from '../utils/logger.js';
-import { npubEncode, nsecEncode, noteEncode, decode as nip19Decode } from 'nostr-crypto-utils';
+import { nip19 } from 'nostr-crypto-utils';
+const { npubEncode, nsecEncode, noteEncode, decode: nip19Decode } = nip19;
 /**
  * Encodes a public key into npub format
  * @param {string} hex - The hex-encoded public key
