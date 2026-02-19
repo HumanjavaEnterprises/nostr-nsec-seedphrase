@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.6] - 2025-02-19
+
+### Changed
+- Updated dependencies to latest within major versions
+- Fixed NIP-19 imports from nostr-crypto-utils
+
 ## [0.6.5] - 2025-01-13
 
 ### Changed
