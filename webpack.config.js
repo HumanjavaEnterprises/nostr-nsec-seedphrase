@@ -22,7 +22,7 @@ export default {
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
     fallback: {
-      crypto: 'crypto-browserify',
+      crypto: false,
       stream: 'stream-browserify',
       buffer: 'buffer/',
       process: 'process/browser',
