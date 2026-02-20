@@ -28,6 +28,7 @@ export default [
       ...tseslint.configs.recommended.rules,
       'no-undef': 'off',
       'no-redeclare': 'off',
+      'preserve-caught-error': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', {
