@@ -26,16 +26,19 @@ function encode(prefix: string, words: number[], limit: number): string {
   return `${prefix}1${bytesToHex(data)}`;
 }
 
-function decode(str: string, limit?: number): { prefix: string; words: number[] } {
+function decode(
+  str: string,
+  limit?: number,
+): { prefix: string; words: number[] } {
   // Simple mock decoding: split on '1'
-  const [prefix, data] = str.split('1');
+  const [prefix, data] = str.split("1");
   if (!prefix || !data) {
-    throw new Error('Invalid bech32 string');
+    throw new Error("Invalid bech32 string");
   }
   const bytes = hexToBytes(data);
   return {
     prefix,
-    words: Array.from(bytes).map(b => b & 0x1f) // Convert to 5-bit words
+    words: Array.from(bytes).map((b) => b & 0x1f), // Convert to 5-bit words
   };
 }
 
@@ -43,5 +46,5 @@ export const bech32 = {
   toWords,
   fromWords,
   encode,
-  decode
+  decode,
 };

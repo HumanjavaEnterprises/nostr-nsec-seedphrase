@@ -125,11 +125,11 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
     // Hash the entropy to generate a proper private key
     const privateKeyBytes = sha256(entropy);
     const privateKeyHex = bytesToHex(privateKeyBytes);
-    
+
     // Derive the public key
     const publicKeyBytes = secp256k1.getPublicKey(privateKeyHex, true); // Force compressed format
     const publicKey = bytesToHex(publicKeyBytes);
-    
+
     // Generate the nsec and npub formats
     const nsec = nip19.nsecEncode(privateKeyHex);
     const npub = nip19.npubEncode(publicKey);
@@ -142,7 +142,10 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
       seedPhrase,
     };
   } catch (error) {
-    logger.error("Failed to create key pair from seed phrase:", error?.toString());
+    logger.error(
+      "Failed to create key pair from seed phrase:",
+      error?.toString(),
+    );
     throw error;
   }
 }
@@ -179,11 +182,11 @@ export function fromHex(privateKeyHex: string): KeyPair {
     if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
       throw new Error("Invalid private key");
     }
-    
+
     // Derive the public key
     const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
     const publicKey = bytesToHex(publicKeyBytes);
-    
+
     // Generate the nsec and npub formats
     const nsec = nip19.nsecEncode(privateKeyHex);
     const npub = nip19.npubEncode(publicKey);
@@ -245,7 +248,9 @@ export const nip19 = {
     const { prefix, words } = bech32.decode(npub, 1000);
     if (prefix !== "npub") throw new Error("Invalid npub: wrong prefix");
     const data = bech32.fromWords(words);
-    return bytesToHex(data instanceof Uint8Array ? data : Uint8Array.from(data));
+    return bytesToHex(
+      data instanceof Uint8Array ? data : Uint8Array.from(data),
+    );
   },
 
   /**
@@ -268,7 +273,9 @@ export const nip19 = {
     const { prefix, words } = bech32.decode(nsec, 1000);
     if (prefix !== "nsec") throw new Error("Invalid nsec: wrong prefix");
     const data = bech32.fromWords(words);
-    return bytesToHex(data instanceof Uint8Array ? data : Uint8Array.from(data));
+    return bytesToHex(
+      data instanceof Uint8Array ? data : Uint8Array.from(data),
+    );
   },
 
   /**
@@ -291,7 +298,9 @@ export const nip19 = {
     const { prefix, words } = bech32.decode(note, 1000);
     if (prefix !== "note") throw new Error("Invalid note: wrong prefix");
     const data = bech32.fromWords(words);
-    return bytesToHex(data instanceof Uint8Array ? data : Uint8Array.from(data));
+    return bytesToHex(
+      data instanceof Uint8Array ? data : Uint8Array.from(data),
+    );
   },
 
   /**
@@ -306,9 +315,9 @@ export const nip19 = {
     const data = bech32.fromWords(words);
     return {
       type: prefix,
-      data: data instanceof Uint8Array ? data : Uint8Array.from(data)
+      data: data instanceof Uint8Array ? data : Uint8Array.from(data),
     };
-  }
+  },
 };
 
 /**
@@ -427,10 +436,7 @@ export function configureHMAC(): void {
   };
 
   logger.log("Configured HMAC for secp256k1");
-  logger.log(
-    "secp256k1.utils after configuration:",
-    (secp256k1 as any).utils,
-  );
+  logger.log("secp256k1.utils after configuration:", (secp256k1 as any).utils);
 }
 
 /**

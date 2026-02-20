@@ -4,11 +4,11 @@
  * @see https://github.com/nostr-protocol/nips/blob/master/26.md
  */
 
-import { schnorr } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import { logger } from '../utils/logger.js';
-import { ValidationResult } from '../types/index.js';
+import { schnorr } from "@noble/curves/secp256k1";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { logger } from "../utils/logger.js";
+import { ValidationResult } from "../types/index.js";
 
 export interface DelegationConditions {
   /** Unix timestamp after which delegation is valid */
@@ -38,12 +38,12 @@ export interface DelegationToken {
 function createDelegationString(
   delegator: string,
   delegatee: string,
-  conditions: DelegationConditions
+  conditions: DelegationConditions,
 ): string {
-  const parts = ['nostr', 'delegation', delegator, delegatee];
+  const parts = ["nostr", "delegation", delegator, delegatee];
 
   if (conditions.kinds) {
-    parts.push(`kinds=${conditions.kinds.join(',')}`);
+    parts.push(`kinds=${conditions.kinds.join(",")}`);
   }
   if (conditions.since) {
     parts.push(`created_at>${conditions.since}`);
@@ -52,7 +52,7 @@ function createDelegationString(
     parts.push(`created_at<${conditions.until}`);
   }
 
-  return parts.join(':');
+  return parts.join(":");
 }
 
 /**
@@ -65,20 +65,24 @@ function createDelegationString(
 export async function createDelegation(
   delegatee: string,
   conditions: DelegationConditions,
-  delegatorPrivateKey: string
+  delegatorPrivateKey: string,
 ): Promise<DelegationToken> {
   try {
     // Get delegator's public key
     const delegator = bytesToHex(schnorr.getPublicKey(delegatorPrivateKey));
 
     // Create delegation string
-    const tokenString = createDelegationString(delegator, delegatee, conditions);
-    
+    const tokenString = createDelegationString(
+      delegator,
+      delegatee,
+      conditions,
+    );
+
     // Sign the token
     const messageHash = sha256(new TextEncoder().encode(tokenString));
     const signature = await schnorr.sign(messageHash, delegatorPrivateKey);
 
-    logger.log('Created delegation token');
+    logger.log("Created delegation token");
     return {
       delegator,
       delegatee,
@@ -86,7 +90,7 @@ export async function createDelegation(
       signature: bytesToHex(signature),
     };
   } catch (error) {
-    logger.error('Failed to create delegation token:', error?.toString());
+    logger.error("Failed to create delegation token:", error?.toString());
     throw error;
   }
 }
@@ -97,7 +101,10 @@ export async function createDelegation(
  * @param now - Current Unix timestamp in seconds (optional, defaults to current time)
  * @returns Result of the validation
  */
-async function verifyDelegation(token: string, now?: number): Promise<ValidationResult> {
+async function verifyDelegation(
+  token: string,
+  now?: number,
+): Promise<ValidationResult> {
   try {
     const tokenObject: DelegationToken = JSON.parse(token);
     // Check conditions
@@ -105,13 +112,13 @@ async function verifyDelegation(token: string, now?: number): Promise<Validation
       if (tokenObject.conditions.since && now < tokenObject.conditions.since) {
         return {
           isValid: false,
-          error: 'Event timestamp before delegation validity period',
+          error: "Event timestamp before delegation validity period",
         };
       }
       if (tokenObject.conditions.until && now > tokenObject.conditions.until) {
         return {
           isValid: false,
-          error: 'Event timestamp after delegation validity period',
+          error: "Event timestamp after delegation validity period",
         };
       }
     }
@@ -120,25 +127,25 @@ async function verifyDelegation(token: string, now?: number): Promise<Validation
     const tokenString = createDelegationString(
       tokenObject.delegator,
       tokenObject.delegatee,
-      tokenObject.conditions
+      tokenObject.conditions,
     );
     const messageHash = sha256(new TextEncoder().encode(tokenString));
 
     const isValid = await schnorr.verify(
       tokenObject.signature,
       messageHash,
-      tokenObject.delegator
+      tokenObject.delegator,
     );
 
     return {
       isValid,
-      error: isValid ? undefined : 'Invalid delegation signature',
+      error: isValid ? undefined : "Invalid delegation signature",
     };
   } catch (error) {
-    logger.error('Failed to verify delegation:', error?.toString());
+    logger.error("Failed to verify delegation:", error?.toString());
     return {
       isValid: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -149,7 +156,10 @@ async function verifyDelegation(token: string, now?: number): Promise<Validation
  * @param now - Current Unix timestamp in seconds (optional, defaults to current time)
  * @returns True if the delegation is valid
  */
-export async function isValidDelegation(token: string, now?: number): Promise<boolean> {
+export async function isValidDelegation(
+  token: string,
+  now?: number,
+): Promise<boolean> {
   const result = await verifyDelegation(token, now);
   return result.isValid;
 }

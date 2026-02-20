@@ -1,6 +1,6 @@
-import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from 'bip39';
-import { sha256 } from '@noble/hashes/sha256';
-import { logger } from '../utils/logger';
+import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from "bip39";
+import { sha256 } from "@noble/hashes/sha256";
+import { logger } from "../utils/logger";
 
 /**
  * Generates a new BIP39 seed phrase
@@ -13,8 +13,11 @@ export function generateSeedPhrase(): string {
   try {
     return generateMnemonic();
   } catch (error) {
-    logger.error('Failed to generate seed phrase:', error instanceof Error ? error.message : String(error));
-    throw new Error('Failed to generate seed phrase');
+    logger.error(
+      "Failed to generate seed phrase:",
+      error instanceof Error ? error.message : String(error),
+    );
+    throw new Error("Failed to generate seed phrase");
   }
 }
 
@@ -30,7 +33,10 @@ export function validateSeedPhrase(seedPhrase: string): boolean {
   try {
     return validateMnemonic(seedPhrase);
   } catch (error) {
-    logger.error('Failed to validate seed phrase:', error instanceof Error ? error.message : String(error));
+    logger.error(
+      "Failed to validate seed phrase:",
+      error instanceof Error ? error.message : String(error),
+    );
     return false;
   }
 }
@@ -47,7 +53,7 @@ export function validateSeedPhrase(seedPhrase: string): boolean {
 export function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array {
   try {
     if (!validateSeedPhrase(seedPhrase)) {
-      throw new Error('Invalid seed phrase');
+      throw new Error("Invalid seed phrase");
     }
     // Convert the seed phrase to entropy bytes
     const entropyHex = mnemonicToEntropy(seedPhrase);
@@ -58,7 +64,10 @@ export function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array {
     }
     return entropyBytes;
   } catch (error) {
-    logger.error('Failed to get entropy from seed phrase:', error instanceof Error ? error.message : String(error));
-    throw new Error('Failed to get entropy from seed phrase');
+    logger.error(
+      "Failed to get entropy from seed phrase:",
+      error instanceof Error ? error.message : String(error),
+    );
+    throw new Error("Failed to get entropy from seed phrase");
   }
 }

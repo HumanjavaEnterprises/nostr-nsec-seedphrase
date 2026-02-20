@@ -4,16 +4,17 @@
  */
 
 // Export events types
-export type { 
-  NostrEvent,
-  ValidationResult 
-} from './events.js';
+export type { NostrEvent, ValidationResult } from "./events.js";
 
 // Export key types
-export type {
-  KeyPair,
-  PublicKeyDetails
-} from './keys.js';
+export type { KeyPair, PublicKeyDetails } from "./keys.js";
 
 // NIP-19 data type
-export type Nip19DataType = 'npub' | 'nsec' | 'note' | 'nprofile' | 'nevent' | 'naddr' | 'nrelay';
+export type Nip19DataType =
+  | "npub"
+  | "nsec"
+  | "note"
+  | "nprofile"
+  | "nevent"
+  | "naddr"
+  | "nrelay";

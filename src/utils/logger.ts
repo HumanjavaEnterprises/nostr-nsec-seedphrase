@@ -14,33 +14,37 @@ interface LoggerInterface {
 }
 
 class BrowserLogger implements LoggerInterface {
-  private logWithLevel(level: 'error' | 'warn' | 'info' | 'debug' | 'log', obj: string | Record<string, unknown>, msg?: string): void {
+  private logWithLevel(
+    level: "error" | "warn" | "info" | "debug" | "log",
+    obj: string | Record<string, unknown>,
+    msg?: string,
+  ): void {
     const consoleMethod = console[level];
-    if (typeof obj === 'string') {
+    if (typeof obj === "string") {
       consoleMethod(obj);
     } else {
-      consoleMethod(obj, msg || '');
+      consoleMethod(obj, msg || "");
     }
   }
 
   error(obj: string | Record<string, unknown>, msg?: string): void {
-    this.logWithLevel('error', obj, msg);
+    this.logWithLevel("error", obj, msg);
   }
 
   warn(obj: string | Record<string, unknown>, msg?: string): void {
-    this.logWithLevel('warn', obj, msg);
+    this.logWithLevel("warn", obj, msg);
   }
 
   info(obj: string | Record<string, unknown>, msg?: string): void {
-    this.logWithLevel('info', obj, msg);
+    this.logWithLevel("info", obj, msg);
   }
 
   debug(obj: string | Record<string, unknown>, msg?: string): void {
-    this.logWithLevel('debug', obj, msg);
+    this.logWithLevel("debug", obj, msg);
   }
 
   log(obj: string | Record<string, unknown>, msg?: string): void {
-    this.logWithLevel('log', obj, msg);
+    this.logWithLevel("log", obj, msg);
   }
 }
 
