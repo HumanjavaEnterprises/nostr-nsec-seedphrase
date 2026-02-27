@@ -101,9 +101,12 @@ export async function seedPhraseToKeyPair(
 
     const entropy = getEntropyFromSeedPhrase(seedPhrase);
     const privateKey = derivePrivateKey(entropy);
+    entropy.fill(0); // zero sensitive material
+    const privateKeyBytes = hexToBytes(privateKey);
     const publicKey = createPublicKey(
-      bytesToHex(getCompressedPublicKey(hexToBytes(privateKey))),
+      bytesToHex(getCompressedPublicKey(privateKeyBytes)),
     );
+    privateKeyBytes.fill(0); // zero sensitive material
 
     return {
       privateKey,
@@ -127,10 +130,11 @@ export async function seedPhraseToKeyPair(
  */
 export function derivePrivateKey(entropy: Uint8Array): string {
   try {
-    let privateKeyBytes = entropy;
     // Hash the entropy to get a valid private key
-    privateKeyBytes = sha256(privateKeyBytes);
-    return bytesToHex(privateKeyBytes);
+    const privateKeyBytes = sha256(entropy);
+    const hex = bytesToHex(privateKeyBytes);
+    privateKeyBytes.fill(0); // zero sensitive material
+    return hex;
   } catch (error) {
     logger.error("Failed to derive private key:", error?.toString());
     throw new Error("Failed to derive private key");
@@ -156,11 +160,13 @@ export async function fromHex(privateKeyHex: string): Promise<KeyPair> {
   try {
     const privateKeyBytes = hexToBytes(privateKeyHex);
     if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+      privateKeyBytes.fill(0); // zero sensitive material
       throw new Error("Invalid private key");
     }
     const publicKey = createPublicKey(
       bytesToHex(getCompressedPublicKey(privateKeyBytes)),
     );
+    privateKeyBytes.fill(0); // zero sensitive material
 
     return {
       privateKey: privateKeyHex,
@@ -187,6 +193,7 @@ export async function validateKeyPair(
   try {
     const privateKeyBytes = hexToBytes(privateKey);
     if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+      privateKeyBytes.fill(0); // zero sensitive material
       return {
         isValid: false,
         error: "Invalid private key",
@@ -197,6 +204,7 @@ export async function validateKeyPair(
     const derivedPublicKey = bytesToHex(
       getCompressedPublicKey(privateKeyBytes),
     );
+    privateKeyBytes.fill(0); // zero sensitive material
 
     if (pubKeyHex !== derivedPublicKey) {
       return {

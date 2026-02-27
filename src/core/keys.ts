@@ -1,5 +1,6 @@
 import * as secp256k1 from "@noble/secp256k1";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha256";
 import { pino } from "pino";
 import { KeyPair } from "../types/keys.js";
 import {
@@ -155,7 +156,9 @@ export function seedPhraseToPrivateKey(seedPhrase: string): string {
     }
 
     const entropy = getEntropyFromSeedPhrase(seedPhrase);
-    return bytesToHex(entropy);
+    const privateKey = bytesToHex(sha256(entropy));
+    entropy.fill(0); // zero sensitive material
+    return privateKey;
   } catch (error) {
     logger.error("Failed to convert seed phrase to private key:", error);
     throw new Error("Failed to convert seed phrase to private key");

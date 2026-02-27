@@ -1,5 +1,6 @@
 import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from "bip39";
 import * as secp256k1 from "@noble/secp256k1";
+import { schnorr } from "@noble/curves/secp256k1";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import { sha256 } from "@noble/hashes/sha256";
 import { hmac } from "@noble/hashes/hmac";
@@ -124,7 +125,9 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
     const entropy = getEntropyFromSeedPhrase(seedPhrase);
     // Hash the entropy to generate a proper private key
     const privateKeyBytes = sha256(entropy);
+    entropy.fill(0); // zero sensitive material
     const privateKeyHex = bytesToHex(privateKeyBytes);
+    privateKeyBytes.fill(0); // zero sensitive material
 
     // Derive the public key
     const publicKeyBytes = secp256k1.getPublicKey(privateKeyHex, true); // Force compressed format
@@ -180,11 +183,13 @@ export function fromHex(privateKeyHex: string): KeyPair {
     // Validate the private key
     const privateKeyBytes = hexToBytes(privateKeyHex);
     if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+      privateKeyBytes.fill(0); // zero sensitive material
       throw new Error("Invalid private key");
     }
 
     // Derive the public key
     const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+    privateKeyBytes.fill(0); // zero sensitive material
     const publicKey = bytesToHex(publicKeyBytes);
 
     // Generate the nsec and npub formats
@@ -216,6 +221,7 @@ export function getPublicKey(privateKey: string): string {
   try {
     const privateKeyBytes = hexToBytes(privateKey);
     const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+    privateKeyBytes.fill(0); // zero sensitive material
     return bytesToHex(publicKeyBytes);
   } catch (error) {
     logger.error("Failed to get public key:", error?.toString());
@@ -358,12 +364,11 @@ export async function signEvent(
 ): Promise<string> {
   try {
     const eventHash = getEventHash(event);
-    const signature = await secp256k1.sign(
-      hexToBytes(eventHash),
-      hexToBytes(privateKey),
-    );
+    const privateKeyBytes = hexToBytes(privateKey);
+    const signature = schnorr.sign(eventHash, privateKeyBytes);
+    privateKeyBytes.fill(0); // zero sensitive material
     logger.log("Event signed successfully");
-    return bytesToHex(signature.toCompactRawBytes());
+    return bytesToHex(signature);
   } catch (error) {
     logger.error("Failed to sign event:", error?.toString());
     throw error;
@@ -392,9 +397,9 @@ export async function verifyEvent(event: NostrEvent): Promise<boolean> {
     }
 
     logger.log("Verifying event signature");
-    return await secp256k1.verify(
+    return schnorr.verify(
       hexToBytes(event.sig),
-      hexToBytes(hash),
+      hash,
       hexToBytes(event.pubkey),
     );
   } catch (error) {
@@ -527,6 +532,7 @@ export function privateKeyToNpub(privateKey: string): string {
   try {
     const privateKeyBytes = hexToBytes(privateKey);
     const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
+    privateKeyBytes.fill(0); // zero sensitive material
     return nip19.npubEncode(bytesToHex(publicKey));
   } catch (error) {
     logger.error("Failed to encode npub:", error?.toString());
@@ -632,9 +638,12 @@ export async function signMessage(
   try {
     const messageBytes = new TextEncoder().encode(message);
     const messageHash = sha256(messageBytes);
-    const signature = await secp256k1.sign(messageHash, hexToBytes(privateKey));
+    const messageHashHex = bytesToHex(messageHash);
+    const privateKeyBytes = hexToBytes(privateKey);
+    const signature = schnorr.sign(messageHashHex, privateKeyBytes);
+    privateKeyBytes.fill(0); // zero sensitive material
     logger.log("Message signed successfully");
-    return bytesToHex(signature.toCompactRawBytes());
+    return bytesToHex(signature);
   } catch (error) {
     logger.error("Failed to sign message:", error?.toString());
     throw error;
@@ -659,10 +668,11 @@ export async function verifySignature(
   try {
     const messageBytes = new TextEncoder().encode(message);
     const messageHash = sha256(messageBytes);
+    const messageHashHex = bytesToHex(messageHash);
     logger.log("Verifying message signature");
-    return await secp256k1.verify(
+    return schnorr.verify(
       hexToBytes(signature),
-      messageHash,
+      messageHashHex,
       hexToBytes(publicKey),
     );
   } catch (error) {

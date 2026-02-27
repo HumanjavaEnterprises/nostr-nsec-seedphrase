@@ -97,6 +97,7 @@ export async function getSharedSecret(
     const privKeyBytes = hexToBytes(privateKey);
     const pubKeyBytes = hexToBytes(publicKey);
     const sharedPoint = schnorr.getPublicKey(privKeyBytes);
+    privKeyBytes.fill(0); // zero sensitive material
     return sha256(sharedPoint);
   } catch (error) {
     logger.error("Failed to get shared secret:", error?.toString());
