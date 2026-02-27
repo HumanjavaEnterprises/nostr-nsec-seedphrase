@@ -96,7 +96,10 @@ export async function getSharedSecret(
   try {
     const privKeyBytes = hexToBytes(privateKey);
     // Nostr uses 32-byte x-only pubkeys; prefix with '02' for compressed format
-    const sharedPoint = secp256k1.getSharedSecret(privKeyBytes, '02' + publicKey);
+    const sharedPoint = secp256k1.getSharedSecret(
+      privKeyBytes,
+      "02" + publicKey,
+    );
     // Extract x-coordinate only (bytes 1..33), per Nostr NIP-04 convention
     const sharedX = sharedPoint.slice(1, 33);
     privKeyBytes.fill(0); // zero sensitive material
