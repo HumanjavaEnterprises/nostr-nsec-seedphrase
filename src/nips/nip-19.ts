@@ -52,7 +52,7 @@ export function hexToNsec(hex: string): string {
   try {
     return nsecEncode(hex);
   } catch (error) {
-    logger.error({ error, hex }, "Failed to encode private key to nsec");
+    logger.error({ error }, "Failed to encode private key to nsec");
     throw error;
   }
 }
@@ -88,7 +88,7 @@ export function decode(str: string): { type: Nip19DataType; data: string } {
   try {
     return nip19Decode(str);
   } catch (error) {
-    logger.error({ error, str }, "Failed to decode bech32 string");
+    logger.error({ error }, "Failed to decode bech32 string");
     throw error;
   }
 }
@@ -107,11 +107,11 @@ export function nsecToHex(nsec: string): string {
   try {
     const decoded = decode(nsec);
     if (decoded.type !== "nsec") {
-      throw new Error(`Invalid nsec format: ${nsec}`);
+      throw new Error("Invalid nsec format");
     }
     return decoded.data;
   } catch (error) {
-    logger.error({ error, nsec }, "Failed to convert nsec to hex");
+    logger.error({ error }, "Failed to convert nsec to hex");
     throw error;
   }
 }

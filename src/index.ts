@@ -100,8 +100,8 @@ export function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array {
  * console.log(isValid); // true
  */
 export function validateSeedPhrase(seedPhrase: string): boolean {
-  logger.log({ seedPhrase }, "Validating seed phrase");
-  logger.log({ seedPhrase }, "Input being validated");
+  logger.log("Validating seed phrase");
+  logger.log("Input being validated");
   const isValid = validateMnemonic(seedPhrase);
   logger.log({ isValid }, "Validated seed phrase");
   return Boolean(isValid);
