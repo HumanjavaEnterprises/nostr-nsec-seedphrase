@@ -4,11 +4,8 @@
 
 // Mock dependencies
 vi.mock("@noble/secp256k1", () => {
-  const TEST_PRIVATE_KEY =
-    "27e2a04464f4e73b9131548b6dffbe47ae49ec7a7562c5a157e6a30f9f1ceb69";
   const TEST_PUBLIC_KEY =
     "02030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021";
-  let lastSignedMessage = "";
 
   return {
     getPublicKey: () => new Uint8Array(hexToBytes(TEST_PUBLIC_KEY)),
@@ -23,22 +20,40 @@ vi.mock("@noble/secp256k1", () => {
         ),
       isValidPrivateKey: () => true,
     },
-    sign: (msg: Uint8Array) => {
-      lastSignedMessage = Array.from(msg)
-        .map((b) => String.fromCharCode(b))
-        .join("");
-      return { toCompactRawBytes: () => new Uint8Array([1, 2, 3, 4]) };
+  };
+});
+
+vi.mock("@noble/curves/secp256k1", () => {
+  let lastSignedHash = "";
+
+  return {
+    schnorr: {
+      sign: (msgHash: string | Uint8Array, _privKey: Uint8Array) => {
+        lastSignedHash =
+          typeof msgHash === "string"
+            ? msgHash
+            : Array.from(msgHash)
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join("");
+        return new Uint8Array(64).fill(1);
+      },
+      verify: (
+        _sig: Uint8Array,
+        msgHash: string | Uint8Array,
+        _pubKey: Uint8Array,
+      ) => {
+        const currentHash =
+          typeof msgHash === "string"
+            ? msgHash
+            : Array.from(msgHash)
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join("");
+        return currentHash === lastSignedHash;
+      },
+      getPublicKey: () => new Uint8Array(32).fill(2),
     },
-    verify: (sig: Uint8Array, msg: Uint8Array, pub: Uint8Array) => {
-      const msgStr = Array.from(msg)
-        .map((b) => String.fromCharCode(b))
-        .join("");
-      return msgStr === lastSignedMessage;
-    },
-    Signature: {
-      fromCompact: () => ({
-        toCompactRawBytes: () => new Uint8Array([1, 2, 3, 4]),
-      }),
+    secp256k1: {
+      getSharedSecret: () => new Uint8Array(33).fill(3),
     },
   };
 });
