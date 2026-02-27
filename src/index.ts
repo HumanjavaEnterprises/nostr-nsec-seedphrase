@@ -433,15 +433,15 @@ export function configureHMAC(): void {
     return h.digest();
   };
 
-  // Type assertion to handle the utils property
-  (secp256k1 as any).utils = {
-    ...(secp256k1 as any).utils,
-    hmacSha256: hmacFunction,
-    hmacSha256Sync: hmacSyncFunction,
-  };
+  // Safety check: only patch if utils exists and hmacSha256Sync is a known property
+  if ('utils' in secp256k1 && typeof (secp256k1 as any).utils?.hmacSha256Sync !== 'undefined') {
+    (secp256k1 as any).utils.hmacSha256 = hmacFunction;
+    (secp256k1 as any).utils.hmacSha256Sync = hmacSyncFunction;
+  } else {
+    logger.log("secp256k1.utils.hmacSha256Sync not found; HMAC configuration skipped (library may handle HMAC internally)");
+  }
 
   logger.log("Configured HMAC for secp256k1");
-  logger.log("secp256k1.utils after configuration:", (secp256k1 as any).utils);
 }
 
 /**
