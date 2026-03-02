@@ -31,7 +31,10 @@ export function toNcryptsec(
     secretBytes.fill(0); // zero sensitive material
     return result;
   } catch (error) {
-    logger.error("Failed to encrypt private key to ncryptsec:", error?.toString());
+    logger.error(
+      "Failed to encrypt private key to ncryptsec:",
+      error?.toString(),
+    );
     throw error;
   }
 }
