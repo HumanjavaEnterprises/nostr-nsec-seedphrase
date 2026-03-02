@@ -2,7 +2,7 @@
  * @module crypto/keys
  * @description Key management functions for Nostr
  */
-import { KeyPair, PublicKeyDetails, ValidationResult, PublicKey } from '../types/keys.js';
+import { KeyPair, PublicKeyDetails, ValidationResult, PublicKey } from "../types/keys.js";
 /**
  * Creates a PublicKeyDetails object from a hex string
  */

@@ -19,8 +19,8 @@ function stringToBytes(str) {
         return new TextEncoder().encode(str);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to convert string to bytes:', error?.toString());
-        throw new Error('Failed to convert string to bytes');
+        logger_js_1.default.error("Failed to convert string to bytes:", error?.toString());
+        throw new Error("Failed to convert string to bytes");
     }
 }
 /**
@@ -33,8 +33,8 @@ function bytesToString(bytes) {
         return new TextDecoder().decode(bytes);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to convert bytes to string:', error?.toString());
-        throw new Error('Failed to convert bytes to string');
+        logger_js_1.default.error("Failed to convert bytes to string:", error?.toString());
+        throw new Error("Failed to convert bytes to string");
     }
 }
 /**
@@ -48,8 +48,8 @@ function hexToBase64(hex) {
         return btoa(String.fromCharCode(...bytes));
     }
     catch (error) {
-        logger_js_1.default.error('Failed to convert hex to base64:', error?.toString());
-        throw new Error('Failed to convert hex to base64');
+        logger_js_1.default.error("Failed to convert hex to base64:", error?.toString());
+        throw new Error("Failed to convert hex to base64");
     }
 }
 /**
@@ -67,7 +67,7 @@ function base64ToHex(base64) {
         return (0, utils_1.bytesToHex)(bytes);
     }
     catch (error) {
-        logger_js_1.default.error('Failed to convert base64 to hex:', error?.toString());
-        throw new Error('Failed to convert base64 to hex');
+        logger_js_1.default.error("Failed to convert base64 to hex:", error?.toString());
+        throw new Error("Failed to convert base64 to hex");
     }
 }

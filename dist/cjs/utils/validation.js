@@ -25,7 +25,7 @@ function isValidHex(hex, expectedLength) {
         return true;
     }
     catch (error) {
-        logger_js_1.default.error('Hex validation failed:', error?.toString());
+        logger_js_1.default.error("Hex validation failed:", error?.toString());
         return false;
     }
 }
@@ -39,10 +39,10 @@ function isValidTimestamp(timestamp, maxAgeDays = 30) {
     try {
         const now = Math.floor(Date.now() / 1000);
         const maxAge = maxAgeDays * 24 * 60 * 60;
-        return timestamp > (now - maxAge) && timestamp <= now;
+        return timestamp > now - maxAge && timestamp <= now;
     }
     catch (error) {
-        logger_js_1.default.error('Timestamp validation failed:', error?.toString());
+        logger_js_1.default.error("Timestamp validation failed:", error?.toString());
         return false;
     }
 }
@@ -56,7 +56,7 @@ function isBase64(str) {
         return /^[A-Za-z0-9+/]*={0,2}$/.test(str);
     }
     catch (error) {
-        logger_js_1.default.error('Base64 validation failed:', error?.toString());
+        logger_js_1.default.error("Base64 validation failed:", error?.toString());
         return false;
     }
 }
@@ -67,10 +67,10 @@ function isBase64(str) {
  */
 function isStringArray(arr) {
     try {
-        return Array.isArray(arr) && arr.every(item => typeof item === 'string');
+        return Array.isArray(arr) && arr.every((item) => typeof item === "string");
     }
     catch (error) {
-        logger_js_1.default.error('String array validation failed:', error?.toString());
+        logger_js_1.default.error("String array validation failed:", error?.toString());
         return false;
     }
 }

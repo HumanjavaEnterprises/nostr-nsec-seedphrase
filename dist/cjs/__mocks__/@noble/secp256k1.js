@@ -7,9 +7,9 @@ const utils_1 = require("@noble/hashes/utils");
 function ensureUint8Array(input) {
     if (input instanceof Uint8Array)
         return input;
-    if (typeof input === 'string')
+    if (typeof input === "string")
         return (0, utils_1.hexToBytes)(input);
-    throw new Error('Input must be Uint8Array or hex string');
+    throw new Error("Input must be Uint8Array or hex string");
 }
 function createMockPublicKey(privateKey) {
     // Create a deterministic 33-byte compressed public key
@@ -25,7 +25,7 @@ function createMockPublicKey(privateKey) {
 function getPublicKey(privateKey) {
     const privKeyBytes = ensureUint8Array(privateKey);
     if (privKeyBytes.length !== 32) {
-        throw new Error('Private key must be 32 bytes');
+        throw new Error("Private key must be 32 bytes");
     }
     return createMockPublicKey(privKeyBytes);
 }
@@ -44,7 +44,7 @@ exports.schnorr = {
     },
     verify(signature, message, publicKey) {
         return Promise.resolve(true);
-    }
+    },
 };
 // Mock utility functions
 exports.utils = {
@@ -65,10 +65,10 @@ exports.utils = {
             privateKey[i] = Math.floor(Math.random() * 256);
         }
         return privateKey;
-    }
+    },
 };
 exports.default = {
     getPublicKey,
     schnorr: exports.schnorr,
-    utils: exports.utils
+    utils: exports.utils,
 };

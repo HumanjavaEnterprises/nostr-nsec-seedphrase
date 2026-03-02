@@ -1,4 +1,4 @@
-import { NostrEvent, UnsignedEvent } from '../types/events.js';
+import { NostrEvent, UnsignedEvent } from "../types/events.js";
 /**
  * Creates a new signed Nostr event
  * @param {string} content - The event content

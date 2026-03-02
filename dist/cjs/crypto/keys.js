@@ -51,7 +51,7 @@ function createPublicKey(hex) {
  * @returns A random 12-word BIP39 mnemonic seed phrase
  */
 function generateSeedPhrase() {
-    logger_js_1.logger.log('Generating new seed phrase');
+    logger_js_1.logger.log("Generating new seed phrase");
     return (0, bip39_1.generateMnemonic)(128); // 12 words
 }
 /**
@@ -63,12 +63,12 @@ function generateSeedPhrase() {
 function getEntropyFromSeedPhrase(seedPhrase) {
     try {
         if (!(0, bip39_1.validateMnemonic)(seedPhrase)) {
-            throw new Error('Invalid seed phrase');
+            throw new Error("Invalid seed phrase");
         }
         return (0, utils_1.hexToBytes)((0, bip39_1.mnemonicToEntropy)(seedPhrase));
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to get entropy from seed phrase:', error?.toString());
+        logger_js_1.logger.error("Failed to get entropy from seed phrase:", error?.toString());
         throw error;
     }
 }
@@ -78,9 +78,9 @@ function getEntropyFromSeedPhrase(seedPhrase) {
  * @returns True if the seed phrase is valid, false otherwise
  */
 function validateSeedPhrase(seedPhrase) {
-    logger_js_1.logger.log({ seedPhrase }, 'Validating seed phrase');
+    logger_js_1.logger.log("Validating seed phrase");
     const isValid = (0, bip39_1.validateMnemonic)(seedPhrase);
-    logger_js_1.logger.log({ isValid }, 'Validated seed phrase');
+    logger_js_1.logger.log({ isValid }, "Validated seed phrase");
     return Boolean(isValid);
 }
 /**
@@ -92,11 +92,14 @@ function validateSeedPhrase(seedPhrase) {
 async function seedPhraseToKeyPair(seedPhrase) {
     try {
         if (!validateSeedPhrase(seedPhrase)) {
-            throw new Error('Invalid seed phrase');
+            throw new Error("Invalid seed phrase");
         }
         const entropy = getEntropyFromSeedPhrase(seedPhrase);
         const privateKey = derivePrivateKey(entropy);
-        const publicKey = createPublicKey((0, utils_1.bytesToHex)(getCompressedPublicKey((0, utils_1.hexToBytes)(privateKey))));
+        entropy.fill(0); // zero sensitive material
+        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
+        const publicKey = createPublicKey((0, utils_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
+        privateKeyBytes.fill(0); // zero sensitive material
         return {
             privateKey,
             publicKey,
@@ -105,7 +108,7 @@ async function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to convert seed phrase to key pair:', error?.toString());
+        logger_js_1.logger.error("Failed to convert seed phrase to key pair:", error?.toString());
         throw error;
     }
 }
@@ -116,14 +119,15 @@ async function seedPhraseToKeyPair(seedPhrase) {
  */
 function derivePrivateKey(entropy) {
     try {
-        let privateKeyBytes = entropy;
         // Hash the entropy to get a valid private key
-        privateKeyBytes = (0, sha256_1.sha256)(privateKeyBytes);
-        return (0, utils_1.bytesToHex)(privateKeyBytes);
+        const privateKeyBytes = (0, sha256_1.sha256)(entropy);
+        const hex = (0, utils_1.bytesToHex)(privateKeyBytes);
+        privateKeyBytes.fill(0); // zero sensitive material
+        return hex;
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to derive private key:', error?.toString());
-        throw new Error('Failed to derive private key');
+        logger_js_1.logger.error("Failed to derive private key:", error?.toString());
+        throw new Error("Failed to derive private key");
     }
 }
 /**
@@ -144,18 +148,20 @@ async function fromHex(privateKeyHex) {
     try {
         const privateKeyBytes = (0, utils_1.hexToBytes)(privateKeyHex);
         if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
-            throw new Error('Invalid private key');
+            privateKeyBytes.fill(0); // zero sensitive material
+            throw new Error("Invalid private key");
         }
         const publicKey = createPublicKey((0, utils_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
+        privateKeyBytes.fill(0); // zero sensitive material
         return {
             privateKey: privateKeyHex,
             publicKey,
             nsec: (0, nip_19_js_1.hexToNsec)(privateKeyHex),
-            seedPhrase: '', // No seed phrase for hex-imported keys
+            seedPhrase: "", // No seed phrase for hex-imported keys
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to create key pair from hex:', error?.toString());
+        logger_js_1.logger.error("Failed to create key pair from hex:", error?.toString());
         throw error;
     }
 }
@@ -169,17 +175,19 @@ async function validateKeyPair(publicKey, privateKey) {
     try {
         const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
         if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+            privateKeyBytes.fill(0); // zero sensitive material
             return {
                 isValid: false,
-                error: 'Invalid private key',
+                error: "Invalid private key",
             };
         }
-        const pubKeyHex = typeof publicKey === 'string' ? publicKey : publicKey.hex;
+        const pubKeyHex = typeof publicKey === "string" ? publicKey : publicKey.hex;
         const derivedPublicKey = (0, utils_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes));
+        privateKeyBytes.fill(0); // zero sensitive material
         if (pubKeyHex !== derivedPublicKey) {
             return {
                 isValid: false,
-                error: 'Public key does not match private key',
+                error: "Public key does not match private key",
             };
         }
         return {
@@ -187,10 +195,10 @@ async function validateKeyPair(publicKey, privateKey) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to validate key pair:', error?.toString());
+        logger_js_1.logger.error("Failed to validate key pair:", error?.toString());
         return {
             isValid: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }
@@ -205,7 +213,7 @@ function validatePublicKey(publicKey) {
         return bytes.length === 32 || bytes.length === 33;
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to validate public key:', error?.toString());
+        logger_js_1.logger.error("Failed to validate public key:", error?.toString());
         return false;
     }
 }

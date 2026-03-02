@@ -2,11 +2,11 @@
  * @module crypto/events
  * @description Event signing and verification functions for Nostr
  */
-import { schnorr } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import { logger } from '../utils/logger.js';
-import { Defaults } from '../constants.js';
+import { schnorr } from "@noble/curves/secp256k1";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { logger } from "../utils/logger.js";
+import { Defaults } from "../constants.js";
 /**
  * Calculates the event hash/ID according to the Nostr protocol
  * @param event - The event to hash
@@ -25,7 +25,7 @@ export function getEventHash(event) {
         return bytesToHex(sha256(new TextEncoder().encode(serialized)));
     }
     catch (error) {
-        logger.error('Failed to calculate event hash:', error?.toString());
+        logger.error("Failed to calculate event hash:", error?.toString());
         throw error;
     }
 }
@@ -57,7 +57,7 @@ export async function signEvent(event, privateKey) {
     try {
         const id = getEventHash(event);
         const sig = bytesToHex(await schnorr.sign(hexToBytes(id), hexToBytes(privateKey)));
-        logger.log('Event signed successfully');
+        logger.log("Event signed successfully");
         return {
             ...event,
             id,
@@ -65,7 +65,7 @@ export async function signEvent(event, privateKey) {
         };
     }
     catch (error) {
-        logger.error('Failed to sign event:', error?.toString());
+        logger.error("Failed to sign event:", error?.toString());
         throw error;
     }
 }
@@ -79,28 +79,28 @@ export async function verifyEvent(event) {
         if (!event.id || !event.pubkey || !event.sig) {
             return {
                 isValid: false,
-                error: 'Missing required fields',
+                error: "Missing required fields",
             };
         }
         const hash = getEventHash(event);
         if (hash !== event.id) {
             return {
                 isValid: false,
-                error: 'Event hash mismatch',
+                error: "Event hash mismatch",
             };
         }
-        logger.log('Verifying event signature');
+        logger.log("Verifying event signature");
         const isValid = await schnorr.verify(hexToBytes(event.sig), hexToBytes(hash), hexToBytes(event.pubkey));
         return {
             isValid,
-            error: isValid ? undefined : 'Invalid signature',
+            error: isValid ? undefined : "Invalid signature",
         };
     }
     catch (error) {
-        logger.error('Failed to verify event:', error?.toString());
+        logger.error("Failed to verify event:", error?.toString());
         return {
             isValid: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }
@@ -116,11 +116,11 @@ export async function signMessage(message, privateKey) {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = sha256(messageBytes);
         const signature = await schnorr.sign(messageHash, hexToBytes(privateKey));
-        logger.log('Message signed successfully');
+        logger.log("Message signed successfully");
         return bytesToHex(signature);
     }
     catch (error) {
-        logger.error('Failed to sign message:', error?.toString());
+        logger.error("Failed to sign message:", error?.toString());
         throw error;
     }
 }
@@ -135,18 +135,18 @@ export async function verifySignature(message, signature, publicKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = sha256(messageBytes);
-        logger.log('Verifying message signature');
+        logger.log("Verifying message signature");
         const isValid = await schnorr.verify(hexToBytes(signature), messageHash, hexToBytes(publicKey));
         return {
             isValid,
-            error: isValid ? undefined : 'Invalid signature',
+            error: isValid ? undefined : "Invalid signature",
         };
     }
     catch (error) {
-        logger.error('Failed to verify signature:', error?.toString());
+        logger.error("Failed to verify signature:", error?.toString());
         return {
             isValid: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }

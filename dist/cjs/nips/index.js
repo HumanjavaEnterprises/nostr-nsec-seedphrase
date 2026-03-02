@@ -37,8 +37,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.nip26 = exports.nip19 = void 0;
+exports.nip49 = exports.nip26 = exports.nip19 = void 0;
 exports.nip19 = __importStar(require("./nip-19.js"));
 exports.nip26 = __importStar(require("./nip-26.js"));
-// We'll add these as we implement them
-// export * from './nip-06.js';
+exports.nip49 = __importStar(require("./nip-49.js"));

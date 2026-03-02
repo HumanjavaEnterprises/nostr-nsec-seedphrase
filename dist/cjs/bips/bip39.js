@@ -17,8 +17,8 @@ function generateSeedPhrase() {
         return (0, bip39_1.generateMnemonic)();
     }
     catch (error) {
-        logger_1.logger.error('Failed to generate seed phrase:', error instanceof Error ? error.message : String(error));
-        throw new Error('Failed to generate seed phrase');
+        logger_1.logger.error("Failed to generate seed phrase:", error instanceof Error ? error.message : String(error));
+        throw new Error("Failed to generate seed phrase");
     }
 }
 /**
@@ -34,7 +34,7 @@ function validateSeedPhrase(seedPhrase) {
         return (0, bip39_1.validateMnemonic)(seedPhrase);
     }
     catch (error) {
-        logger_1.logger.error('Failed to validate seed phrase:', error instanceof Error ? error.message : String(error));
+        logger_1.logger.error("Failed to validate seed phrase:", error instanceof Error ? error.message : String(error));
         return false;
     }
 }
@@ -50,7 +50,7 @@ function validateSeedPhrase(seedPhrase) {
 function getEntropyFromSeedPhrase(seedPhrase) {
     try {
         if (!validateSeedPhrase(seedPhrase)) {
-            throw new Error('Invalid seed phrase');
+            throw new Error("Invalid seed phrase");
         }
         // Convert the seed phrase to entropy bytes
         const entropyHex = (0, bip39_1.mnemonicToEntropy)(seedPhrase);
@@ -62,7 +62,7 @@ function getEntropyFromSeedPhrase(seedPhrase) {
         return entropyBytes;
     }
     catch (error) {
-        logger_1.logger.error('Failed to get entropy from seed phrase:', error instanceof Error ? error.message : String(error));
-        throw new Error('Failed to get entropy from seed phrase');
+        logger_1.logger.error("Failed to get entropy from seed phrase:", error instanceof Error ? error.message : String(error));
+        throw new Error("Failed to get entropy from seed phrase");
     }
 }

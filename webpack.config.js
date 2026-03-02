@@ -21,6 +21,11 @@ export default {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
+    alias: {
+      // Force webpack to use the CJS build of nostr-crypto-utils
+      // (its ESM output lacks .mjs extensions and breaks without a loader)
+      'nostr-crypto-utils': path.resolve(__dirname, 'node_modules/nostr-crypto-utils/dist/cjs/index.js'),
+    },
     fallback: {
       crypto: false,
       stream: 'stream-browserify',

@@ -6,8 +6,8 @@
  * and note (event IDs) formats.
  * @see https://github.com/nostr-protocol/nips/blob/master/19.md
  */
-import { logger } from '../utils/logger.js';
-import { nip19 } from 'nostr-crypto-utils';
+import { logger } from "../utils/logger.js";
+import { nip19 } from "nostr-crypto-utils";
 const { npubEncode, nsecEncode, noteEncode, decode: nip19Decode } = nip19;
 /**
  * Encodes a public key into npub format
@@ -23,7 +23,7 @@ export function hexToNpub(hex) {
         return npubEncode(hex);
     }
     catch (error) {
-        logger.error({ error, hex }, 'Failed to encode public key to npub');
+        logger.error({ error, hex }, "Failed to encode public key to npub");
         throw error;
     }
 }
@@ -42,7 +42,7 @@ export function hexToNsec(hex) {
         return nsecEncode(hex);
     }
     catch (error) {
-        logger.error({ error, hex }, 'Failed to encode private key to nsec');
+        logger.error({ error }, "Failed to encode private key to nsec");
         throw error;
     }
 }
@@ -60,7 +60,7 @@ export function hexToNote(hex) {
         return noteEncode(hex);
     }
     catch (error) {
-        logger.error({ error, hex }, 'Failed to encode event ID to note');
+        logger.error({ error, hex }, "Failed to encode event ID to note");
         throw error;
     }
 }
@@ -78,7 +78,7 @@ export function decode(str) {
         return nip19Decode(str);
     }
     catch (error) {
-        logger.error({ error, str }, 'Failed to decode bech32 string');
+        logger.error({ error }, "Failed to decode bech32 string");
         throw error;
     }
 }
@@ -95,13 +95,13 @@ export function decode(str) {
 export function nsecToHex(nsec) {
     try {
         const decoded = decode(nsec);
-        if (decoded.type !== 'nsec') {
-            throw new Error(`Invalid nsec format: ${nsec}`);
+        if (decoded.type !== "nsec") {
+            throw new Error("Invalid nsec format");
         }
         return decoded.data;
     }
     catch (error) {
-        logger.error({ error, nsec }, 'Failed to convert nsec to hex');
+        logger.error({ error }, "Failed to convert nsec to hex");
         throw error;
     }
 }
@@ -117,13 +117,13 @@ export function nsecToHex(nsec) {
 export function npubToHex(npub) {
     try {
         const decoded = decode(npub);
-        if (decoded.type !== 'npub') {
+        if (decoded.type !== "npub") {
             throw new Error(`Invalid npub format: ${npub}`);
         }
         return decoded.data;
     }
     catch (error) {
-        logger.error({ error, npub }, 'Failed to convert npub to hex');
+        logger.error({ error, npub }, "Failed to convert npub to hex");
         throw error;
     }
 }

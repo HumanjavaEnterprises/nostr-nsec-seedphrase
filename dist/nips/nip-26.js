@@ -3,19 +3,19 @@
  * @description NIP-26 Delegated Event Signing implementation
  * @see https://github.com/nostr-protocol/nips/blob/master/26.md
  */
-import { schnorr } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex } from '@noble/hashes/utils';
-import { logger } from '../utils/logger.js';
+import { schnorr } from "@noble/curves/secp256k1";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex } from "@noble/hashes/utils";
+import { logger } from "../utils/logger.js";
 /**
  * Creates a delegation token string
  * @param conditions - Delegation conditions
  * @returns Delegation token string
  */
 function createDelegationString(delegator, delegatee, conditions) {
-    const parts = ['nostr', 'delegation', delegator, delegatee];
+    const parts = ["nostr", "delegation", delegator, delegatee];
     if (conditions.kinds) {
-        parts.push(`kinds=${conditions.kinds.join(',')}`);
+        parts.push(`kinds=${conditions.kinds.join(",")}`);
     }
     if (conditions.since) {
         parts.push(`created_at>${conditions.since}`);
@@ -23,7 +23,7 @@ function createDelegationString(delegator, delegatee, conditions) {
     if (conditions.until) {
         parts.push(`created_at<${conditions.until}`);
     }
-    return parts.join(':');
+    return parts.join(":");
 }
 /**
  * Creates a delegation token
@@ -41,7 +41,7 @@ export async function createDelegation(delegatee, conditions, delegatorPrivateKe
         // Sign the token
         const messageHash = sha256(new TextEncoder().encode(tokenString));
         const signature = await schnorr.sign(messageHash, delegatorPrivateKey);
-        logger.log('Created delegation token');
+        logger.log("Created delegation token");
         return {
             delegator,
             delegatee,
@@ -50,7 +50,7 @@ export async function createDelegation(delegatee, conditions, delegatorPrivateKe
         };
     }
     catch (error) {
-        logger.error('Failed to create delegation token:', error?.toString());
+        logger.error("Failed to create delegation token:", error?.toString());
         throw error;
     }
 }
@@ -68,13 +68,13 @@ async function verifyDelegation(token, now) {
             if (tokenObject.conditions.since && now < tokenObject.conditions.since) {
                 return {
                     isValid: false,
-                    error: 'Event timestamp before delegation validity period',
+                    error: "Event timestamp before delegation validity period",
                 };
             }
             if (tokenObject.conditions.until && now > tokenObject.conditions.until) {
                 return {
                     isValid: false,
-                    error: 'Event timestamp after delegation validity period',
+                    error: "Event timestamp after delegation validity period",
                 };
             }
         }
@@ -84,14 +84,14 @@ async function verifyDelegation(token, now) {
         const isValid = await schnorr.verify(tokenObject.signature, messageHash, tokenObject.delegator);
         return {
             isValid,
-            error: isValid ? undefined : 'Invalid delegation signature',
+            error: isValid ? undefined : "Invalid delegation signature",
         };
     }
     catch (error) {
-        logger.error('Failed to verify delegation:', error?.toString());
+        logger.error("Failed to verify delegation:", error?.toString());
         return {
             isValid: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }

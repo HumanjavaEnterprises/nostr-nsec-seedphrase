@@ -40,6 +40,7 @@ exports.seedPhraseToKeyPair = seedPhraseToKeyPair;
 exports.seedPhraseToPrivateKey = seedPhraseToPrivateKey;
 const secp256k1 = __importStar(require("@noble/secp256k1"));
 const utils_1 = require("@noble/hashes/utils");
+const sha256_1 = require("@noble/hashes/sha256");
 const pino_1 = require("pino");
 const bip39_js_1 = require("../bips/bip39.js");
 const nip_19_js_1 = require("../nips/nip-19.js");
@@ -66,8 +67,8 @@ function getPublicKey(privateKey) {
         return pubkey;
     }
     catch (error) {
-        logger.error('Failed to derive public key:', error);
-        throw new Error('Failed to derive public key');
+        logger.error("Failed to derive public key:", error);
+        throw new Error("Failed to derive public key");
     }
 }
 /**
@@ -84,7 +85,7 @@ function getPublicKey(privateKey) {
 function fromHex(privateKeyHex) {
     try {
         if (!privateKeyHex || privateKeyHex.length !== 64) {
-            throw new Error('Invalid private key format');
+            throw new Error("Invalid private key format");
         }
         const pubkeyHex = getPublicKey(privateKeyHex);
         const pubkeyBytes = (0, utils_1.hexToBytes)(pubkeyHex);
@@ -92,19 +93,19 @@ function fromHex(privateKeyHex) {
             hex: pubkeyHex,
             compressed: pubkeyBytes,
             schnorr: pubkeyBytes.slice(1),
-            npub: (0, nip_19_js_1.hexToNpub)(pubkeyHex)
+            npub: (0, nip_19_js_1.hexToNpub)(pubkeyHex),
         };
         const nsec = (0, nip_19_js_1.hexToNsec)(privateKeyHex);
         return {
             privateKey: privateKeyHex,
             publicKey,
             nsec,
-            seedPhrase: '', // No seed phrase for hex-derived keys
+            seedPhrase: "", // No seed phrase for hex-derived keys
         };
     }
     catch (error) {
-        logger.error('Failed to create key pair from hex:', error);
-        throw new Error('Failed to create key pair from hex');
+        logger.error("Failed to create key pair from hex:", error);
+        throw new Error("Failed to create key pair from hex");
     }
 }
 /**
@@ -120,13 +121,13 @@ function generateKeyPairWithSeed() {
     try {
         const seedPhrase = (0, bip39_js_1.generateSeedPhrase)();
         if (!(0, bip39_js_1.validateSeedPhrase)(seedPhrase)) {
-            throw new Error('Generated invalid seed phrase');
+            throw new Error("Generated invalid seed phrase");
         }
         return seedPhraseToKeyPair(seedPhrase);
     }
     catch (error) {
-        logger.error('Failed to generate key pair with seed:', error);
-        throw new Error('Failed to generate key pair with seed');
+        logger.error("Failed to generate key pair with seed:", error);
+        throw new Error("Failed to generate key pair with seed");
     }
 }
 /**
@@ -144,7 +145,7 @@ function generateKeyPairWithSeed() {
 function seedPhraseToKeyPair(seedPhrase) {
     try {
         if (!(0, bip39_js_1.validateSeedPhrase)(seedPhrase)) {
-            throw new Error('Invalid seed phrase');
+            throw new Error("Invalid seed phrase");
         }
         const privateKey = seedPhraseToPrivateKey(seedPhrase);
         const pubkeyHex = getPublicKey(privateKey);
@@ -153,7 +154,7 @@ function seedPhraseToKeyPair(seedPhrase) {
             hex: pubkeyHex,
             compressed: pubkeyBytes,
             schnorr: pubkeyBytes.slice(1),
-            npub: (0, nip_19_js_1.hexToNpub)(pubkeyHex)
+            npub: (0, nip_19_js_1.hexToNpub)(pubkeyHex),
         };
         const nsec = (0, nip_19_js_1.hexToNsec)(privateKey);
         return {
@@ -164,8 +165,8 @@ function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger.error('Failed to convert seed phrase to key pair:', error);
-        throw new Error('Failed to convert seed phrase to key pair');
+        logger.error("Failed to convert seed phrase to key pair:", error);
+        throw new Error("Failed to convert seed phrase to key pair");
     }
 }
 /**
@@ -180,13 +181,15 @@ function seedPhraseToKeyPair(seedPhrase) {
 function seedPhraseToPrivateKey(seedPhrase) {
     try {
         if (!(0, bip39_js_1.validateSeedPhrase)(seedPhrase)) {
-            throw new Error('Invalid seed phrase');
+            throw new Error("Invalid seed phrase");
         }
         const entropy = (0, bip39_js_1.getEntropyFromSeedPhrase)(seedPhrase);
-        return (0, utils_1.bytesToHex)(entropy);
+        const privateKey = (0, utils_1.bytesToHex)((0, sha256_1.sha256)(entropy));
+        entropy.fill(0); // zero sensitive material
+        return privateKey;
     }
     catch (error) {
-        logger.error('Failed to convert seed phrase to private key:', error);
-        throw new Error('Failed to convert seed phrase to private key');
+        logger.error("Failed to convert seed phrase to private key:", error);
+        throw new Error("Failed to convert seed phrase to private key");
     }
 }

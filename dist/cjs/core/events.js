@@ -56,8 +56,8 @@ async function createEvent(content, kind, privateKey, tags = []) {
         };
     }
     catch (error) {
-        logger.error('Failed to create event:', error);
-        throw new Error('Failed to create event');
+        logger.error("Failed to create event:", error);
+        throw new Error("Failed to create event");
     }
 }
 /**
@@ -72,13 +72,13 @@ function validateEventStructure(event) {
             return false;
         }
         // Validate field types
-        if (typeof event.id !== 'string' ||
-            typeof event.pubkey !== 'string' ||
-            typeof event.created_at !== 'number' ||
-            typeof event.kind !== 'number' ||
+        if (typeof event.id !== "string" ||
+            typeof event.pubkey !== "string" ||
+            typeof event.created_at !== "number" ||
+            typeof event.kind !== "number" ||
             !Array.isArray(event.tags) ||
-            typeof event.content !== 'string' ||
-            typeof event.sig !== 'string') {
+            typeof event.content !== "string" ||
+            typeof event.sig !== "string") {
             return false;
         }
         // Validate field formats
@@ -88,13 +88,13 @@ function validateEventStructure(event) {
             return false;
         }
         // Validate tags structure
-        if (!event.tags.every(tag => Array.isArray(tag) && tag.every(item => typeof item === 'string'))) {
+        if (!event.tags.every((tag) => Array.isArray(tag) && tag.every((item) => typeof item === "string"))) {
             return false;
         }
         return true;
     }
     catch (error) {
-        logger.error('Failed to validate event structure:', error);
+        logger.error("Failed to validate event structure:", error);
         return false;
     }
 }
@@ -115,8 +115,8 @@ function serializeEvent(event) {
         ]);
     }
     catch (error) {
-        logger.error('Failed to serialize event:', error);
-        throw new Error('Failed to serialize event');
+        logger.error("Failed to serialize event:", error);
+        throw new Error("Failed to serialize event");
     }
 }
 /**
@@ -134,7 +134,7 @@ function getEventDate(event) {
  * @returns {string[][]} Array of matching tags
  */
 function getEventTags(event, tagName) {
-    return event.tags.filter(tag => tag[0] === tagName);
+    return event.tags.filter((tag) => tag[0] === tagName);
 }
 /**
  * Checks if an event has a specific tag
@@ -143,5 +143,5 @@ function getEventTags(event, tagName) {
  * @returns {boolean} True if the event has the tag
  */
 function hasEventTag(event, tagName) {
-    return event.tags.some(tag => tag[0] === tagName);
+    return event.tags.some((tag) => tag[0] === tagName);
 }

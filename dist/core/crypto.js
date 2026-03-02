@@ -1,8 +1,8 @@
-import { schnorr } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
-import { hmac } from '@noble/hashes/hmac';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import logger from '../utils/logger.js';
+import { secp256k1, schnorr } from "@noble/curves/secp256k1";
+import { sha256 } from "@noble/hashes/sha256";
+import { hmac } from "@noble/hashes/hmac";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import logger from "../utils/logger.js";
 /**
  * Signs a message with a private key
  * @param {string} message - Message to sign
@@ -18,8 +18,8 @@ export async function sign(message, privateKey) {
         return bytesToHex(signature);
     }
     catch (error) {
-        logger.error('Failed to sign message:', error?.toString());
-        throw new Error('Failed to sign message');
+        logger.error("Failed to sign message:", error?.toString());
+        throw new Error("Failed to sign message");
     }
 }
 /**
@@ -38,7 +38,7 @@ export async function verify(signature, message, publicKey) {
         return isValid;
     }
     catch (error) {
-        logger.error('Failed to verify signature:', error?.toString());
+        logger.error("Failed to verify signature:", error?.toString());
         return false;
     }
 }
@@ -54,33 +54,36 @@ export async function verifyWithResult(signature, message, publicKey) {
         const isValid = await verify(signature, message, publicKey);
         return {
             isValid,
-            error: isValid ? undefined : 'Invalid signature',
+            error: isValid ? undefined : "Invalid signature",
         };
     }
     catch (error) {
-        logger.error('Failed to verify with result:', error?.toString());
+        logger.error("Failed to verify with result:", error?.toString());
         return {
             isValid: false,
-            error: error?.toString() || 'Unknown error',
+            error: error?.toString() || "Unknown error",
         };
     }
 }
 /**
  * Derives a shared secret using ECDH
  * @param {string} privateKey - Private key in hex format
- * @param {string} publicKey - Public key in hex format
- * @returns {Promise<Uint8Array>} Shared secret bytes
+ * @param {string} publicKey - Public key in hex format (32-byte x-only Nostr pubkey)
+ * @returns {Promise<Uint8Array>} Shared secret bytes (x-coordinate of the shared point)
  */
 export async function getSharedSecret(privateKey, publicKey) {
     try {
         const privKeyBytes = hexToBytes(privateKey);
-        const pubKeyBytes = hexToBytes(publicKey);
-        const sharedPoint = schnorr.getPublicKey(privKeyBytes);
-        return sha256(sharedPoint);
+        // Nostr uses 32-byte x-only pubkeys; prefix with '02' for compressed format
+        const sharedPoint = secp256k1.getSharedSecret(privKeyBytes, "02" + publicKey);
+        // Extract x-coordinate only (bytes 1..33), per Nostr NIP-04 convention
+        const sharedX = sharedPoint.slice(1, 33);
+        privKeyBytes.fill(0); // zero sensitive material
+        return sharedX;
     }
     catch (error) {
-        logger.error('Failed to get shared secret:', error?.toString());
-        throw new Error('Failed to get shared secret');
+        logger.error("Failed to get shared secret:", error?.toString());
+        throw new Error("Failed to get shared secret");
     }
 }
 /**
@@ -120,8 +123,8 @@ export function getEventHash(event) {
         return bytesToHex(hash);
     }
     catch (error) {
-        logger.error('Failed to get event hash:', error?.toString());
-        throw new Error('Failed to get event hash');
+        logger.error("Failed to get event hash:", error?.toString());
+        throw new Error("Failed to get event hash");
     }
 }
 /**
@@ -137,8 +140,8 @@ export async function signEvent(event, privateKey) {
         return bytesToHex(sig);
     }
     catch (error) {
-        logger.error('Failed to sign event:', error?.toString());
-        throw new Error('Failed to sign event');
+        logger.error("Failed to sign event:", error?.toString());
+        throw new Error("Failed to sign event");
     }
 }
 /**
@@ -158,7 +161,7 @@ export async function verifyEvent(event) {
         return schnorr.verify(hexToBytes(event.sig), hash, hexToBytes(event.pubkey));
     }
     catch (error) {
-        logger.error('Failed to verify event:', error?.toString());
+        logger.error("Failed to verify event:", error?.toString());
         return false;
     }
 }
@@ -176,8 +179,8 @@ export async function signMessage(message, privateKey) {
         return bytesToHex(sig);
     }
     catch (error) {
-        logger.error('Failed to sign message:', error?.toString());
-        throw new Error('Failed to sign message');
+        logger.error("Failed to sign message:", error?.toString());
+        throw new Error("Failed to sign message");
     }
 }
 /**
@@ -194,7 +197,7 @@ export async function verifyMessage(signature, message, publicKey) {
         return await schnorr.verify(hexToBytes(signature), messageHashHex, hexToBytes(publicKey));
     }
     catch (error) {
-        logger.error('Failed to verify message:', error?.toString());
+        logger.error("Failed to verify message:", error?.toString());
         return false;
     }
 }
@@ -207,7 +210,7 @@ export function configureHMAC() {
         schnorr.utils.hmacSha256Async = hmacSha256Async;
     }
     catch (error) {
-        logger.error('Failed to configure HMAC:', error?.toString());
-        throw new Error('Failed to configure HMAC');
+        logger.error("Failed to configure HMAC:", error?.toString());
+        throw new Error("Failed to configure HMAC");
     }
 }

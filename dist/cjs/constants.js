@@ -10,14 +10,14 @@ exports.Defaults = exports.Protocol = exports.NOSTR_TAG = exports.NOSTR_EVENT_KI
  * @see https://github.com/nostr-protocol/nips/blob/master/01.md
  */
 exports.NOSTR_MESSAGE_TYPE = {
-    EVENT: 'EVENT',
-    REQ: 'REQ',
-    CLOSE: 'CLOSE',
-    NOTICE: 'NOTICE',
-    EOSE: 'EOSE',
-    OK: 'OK',
-    AUTH: 'AUTH',
-    ERROR: 'ERROR'
+    EVENT: "EVENT",
+    REQ: "REQ",
+    CLOSE: "CLOSE",
+    NOTICE: "NOTICE",
+    EOSE: "EOSE",
+    OK: "OK",
+    AUTH: "AUTH",
+    ERROR: "ERROR",
 };
 /**
  * Standard Nostr event kinds as defined in various NIPs
@@ -45,26 +45,26 @@ exports.NOSTR_EVENT_KIND = {
     EPHEMERAL_FIRST: 20000,
     EPHEMERAL_LAST: 29999,
     PARAMETERIZED_REPLACEABLE_FIRST: 30000,
-    PARAMETERIZED_REPLACEABLE_LAST: 39999
+    PARAMETERIZED_REPLACEABLE_LAST: 39999,
 };
 /**
  * Standard Nostr tag types
  */
 exports.NOSTR_TAG = {
-    EVENT: 'e',
-    PUBKEY: 'p',
-    REFERENCE: 'a',
-    DELEGATION: 'delegation',
-    DEDUPLICATION: 'd',
-    EXPIRATION: 'expiration',
-    KIND: 'k',
-    RELAY: 'relay'
+    EVENT: "e",
+    PUBKEY: "p",
+    REFERENCE: "a",
+    DELEGATION: "delegation",
+    DEDUPLICATION: "d",
+    EXPIRATION: "expiration",
+    KIND: "k",
+    RELAY: "relay",
 };
 /**
  * Protocol-related constants
  */
 exports.Protocol = {
-    DEFAULT_RELAY_URL: 'wss://relay.nostr.info',
+    DEFAULT_RELAY_URL: "wss://relay.nostr.info",
     RECONNECT_DELAY: 1000,
     MAX_RECONNECT_DELAY: 30000,
     PING_INTERVAL: 30000,
@@ -77,5 +77,5 @@ exports.Defaults = {
     KIND: exports.NOSTR_EVENT_KIND.TEXT_NOTE,
     CREATED_AT: () => Math.floor(Date.now() / 1000),
     TAGS: [],
-    CONTENT: '',
+    CONTENT: "",
 };

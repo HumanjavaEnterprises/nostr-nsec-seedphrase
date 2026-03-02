@@ -1,4 +1,4 @@
-import logger from './logger.js';
+import logger from "./logger.js";
 /**
  * Validates a hex string
  * @param {string} hex - The hex string to validate
@@ -16,7 +16,7 @@ export function isValidHex(hex, expectedLength) {
         return true;
     }
     catch (error) {
-        logger.error('Hex validation failed:', error?.toString());
+        logger.error("Hex validation failed:", error?.toString());
         return false;
     }
 }
@@ -30,10 +30,10 @@ export function isValidTimestamp(timestamp, maxAgeDays = 30) {
     try {
         const now = Math.floor(Date.now() / 1000);
         const maxAge = maxAgeDays * 24 * 60 * 60;
-        return timestamp > (now - maxAge) && timestamp <= now;
+        return timestamp > now - maxAge && timestamp <= now;
     }
     catch (error) {
-        logger.error('Timestamp validation failed:', error?.toString());
+        logger.error("Timestamp validation failed:", error?.toString());
         return false;
     }
 }
@@ -47,7 +47,7 @@ export function isBase64(str) {
         return /^[A-Za-z0-9+/]*={0,2}$/.test(str);
     }
     catch (error) {
-        logger.error('Base64 validation failed:', error?.toString());
+        logger.error("Base64 validation failed:", error?.toString());
         return false;
     }
 }
@@ -58,10 +58,10 @@ export function isBase64(str) {
  */
 export function isStringArray(arr) {
     try {
-        return Array.isArray(arr) && arr.every(item => typeof item === 'string');
+        return Array.isArray(arr) && arr.every((item) => typeof item === "string");
     }
     catch (error) {
-        logger.error('String array validation failed:', error?.toString());
+        logger.error("String array validation failed:", error?.toString());
         return false;
     }
 }

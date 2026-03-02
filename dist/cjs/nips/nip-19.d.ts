@@ -6,7 +6,7 @@
  * and note (event IDs) formats.
  * @see https://github.com/nostr-protocol/nips/blob/master/19.md
  */
-type Nip19DataType = 'npub' | 'nsec' | 'note' | 'nprofile' | 'nevent' | 'naddr' | 'nrelay';
+type Nip19DataType = "npub" | "nsec" | "note" | "nprofile" | "nevent" | "naddr" | "nrelay";
 /**
  * Encodes a public key into npub format
  * @param {string} hex - The hex-encoded public key

@@ -13,7 +13,7 @@ export function validateMnemonic(mnemonic) {
         return true;
     }
     const words = mnemonic.split(" ");
-    const isValid = words.length === 12 && words.every(word => word.length > 0);
+    const isValid = words.length === 12 && words.every((word) => word.length > 0);
     console.log(`Validation result for "${mnemonic}": ${isValid}`);
     return isValid;
 }

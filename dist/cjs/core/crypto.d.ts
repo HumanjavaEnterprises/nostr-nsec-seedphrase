@@ -1,5 +1,5 @@
-import type { ValidationResult } from '../types/keys.js';
-import type { NostrEvent, UnsignedEvent } from '../types/events.js';
+import type { ValidationResult } from "../types/keys.js";
+import type { NostrEvent, UnsignedEvent } from "../types/events.js";
 /**
  * Signs a message with a private key
  * @param {string} message - Message to sign
@@ -26,8 +26,8 @@ export declare function verifyWithResult(signature: string, message: string, pub
 /**
  * Derives a shared secret using ECDH
  * @param {string} privateKey - Private key in hex format
- * @param {string} publicKey - Public key in hex format
- * @returns {Promise<Uint8Array>} Shared secret bytes
+ * @param {string} publicKey - Public key in hex format (32-byte x-only Nostr pubkey)
+ * @returns {Promise<Uint8Array>} Shared secret bytes (x-coordinate of the shared point)
  */
 export declare function getSharedSecret(privateKey: string, publicKey: string): Promise<Uint8Array>;
 /**

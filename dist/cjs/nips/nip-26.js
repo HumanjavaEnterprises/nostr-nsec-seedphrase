@@ -18,9 +18,9 @@ const logger_js_1 = require("../utils/logger.js");
  * @returns Delegation token string
  */
 function createDelegationString(delegator, delegatee, conditions) {
-    const parts = ['nostr', 'delegation', delegator, delegatee];
+    const parts = ["nostr", "delegation", delegator, delegatee];
     if (conditions.kinds) {
-        parts.push(`kinds=${conditions.kinds.join(',')}`);
+        parts.push(`kinds=${conditions.kinds.join(",")}`);
     }
     if (conditions.since) {
         parts.push(`created_at>${conditions.since}`);
@@ -28,7 +28,7 @@ function createDelegationString(delegator, delegatee, conditions) {
     if (conditions.until) {
         parts.push(`created_at<${conditions.until}`);
     }
-    return parts.join(':');
+    return parts.join(":");
 }
 /**
  * Creates a delegation token
@@ -46,7 +46,7 @@ async function createDelegation(delegatee, conditions, delegatorPrivateKey) {
         // Sign the token
         const messageHash = (0, sha256_1.sha256)(new TextEncoder().encode(tokenString));
         const signature = await secp256k1_1.schnorr.sign(messageHash, delegatorPrivateKey);
-        logger_js_1.logger.log('Created delegation token');
+        logger_js_1.logger.log("Created delegation token");
         return {
             delegator,
             delegatee,
@@ -55,7 +55,7 @@ async function createDelegation(delegatee, conditions, delegatorPrivateKey) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to create delegation token:', error?.toString());
+        logger_js_1.logger.error("Failed to create delegation token:", error?.toString());
         throw error;
     }
 }
@@ -73,13 +73,13 @@ async function verifyDelegation(token, now) {
             if (tokenObject.conditions.since && now < tokenObject.conditions.since) {
                 return {
                     isValid: false,
-                    error: 'Event timestamp before delegation validity period',
+                    error: "Event timestamp before delegation validity period",
                 };
             }
             if (tokenObject.conditions.until && now > tokenObject.conditions.until) {
                 return {
                     isValid: false,
-                    error: 'Event timestamp after delegation validity period',
+                    error: "Event timestamp after delegation validity period",
                 };
             }
         }
@@ -89,14 +89,14 @@ async function verifyDelegation(token, now) {
         const isValid = await secp256k1_1.schnorr.verify(tokenObject.signature, messageHash, tokenObject.delegator);
         return {
             isValid,
-            error: isValid ? undefined : 'Invalid delegation signature',
+            error: isValid ? undefined : "Invalid delegation signature",
         };
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to verify delegation:', error?.toString());
+        logger_js_1.logger.error("Failed to verify delegation:", error?.toString());
         return {
             isValid: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }

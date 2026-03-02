@@ -1,6 +1,6 @@
-import { pino } from 'pino';
-import { signEvent, getEventHash } from './crypto.js';
-import { getPublicKey } from './keys.js';
+import { pino } from "pino";
+import { signEvent, getEventHash } from "./crypto.js";
+import { getPublicKey } from "./keys.js";
 const logger = pino({
     level: process.env.LOG_LEVEL || "info",
     transport: {
@@ -48,8 +48,8 @@ export async function createEvent(content, kind, privateKey, tags = []) {
         };
     }
     catch (error) {
-        logger.error('Failed to create event:', error);
-        throw new Error('Failed to create event');
+        logger.error("Failed to create event:", error);
+        throw new Error("Failed to create event");
     }
 }
 /**
@@ -64,13 +64,13 @@ export function validateEventStructure(event) {
             return false;
         }
         // Validate field types
-        if (typeof event.id !== 'string' ||
-            typeof event.pubkey !== 'string' ||
-            typeof event.created_at !== 'number' ||
-            typeof event.kind !== 'number' ||
+        if (typeof event.id !== "string" ||
+            typeof event.pubkey !== "string" ||
+            typeof event.created_at !== "number" ||
+            typeof event.kind !== "number" ||
             !Array.isArray(event.tags) ||
-            typeof event.content !== 'string' ||
-            typeof event.sig !== 'string') {
+            typeof event.content !== "string" ||
+            typeof event.sig !== "string") {
             return false;
         }
         // Validate field formats
@@ -80,13 +80,13 @@ export function validateEventStructure(event) {
             return false;
         }
         // Validate tags structure
-        if (!event.tags.every(tag => Array.isArray(tag) && tag.every(item => typeof item === 'string'))) {
+        if (!event.tags.every((tag) => Array.isArray(tag) && tag.every((item) => typeof item === "string"))) {
             return false;
         }
         return true;
     }
     catch (error) {
-        logger.error('Failed to validate event structure:', error);
+        logger.error("Failed to validate event structure:", error);
         return false;
     }
 }
@@ -107,8 +107,8 @@ export function serializeEvent(event) {
         ]);
     }
     catch (error) {
-        logger.error('Failed to serialize event:', error);
-        throw new Error('Failed to serialize event');
+        logger.error("Failed to serialize event:", error);
+        throw new Error("Failed to serialize event");
     }
 }
 /**
@@ -126,7 +126,7 @@ export function getEventDate(event) {
  * @returns {string[][]} Array of matching tags
  */
 export function getEventTags(event, tagName) {
-    return event.tags.filter(tag => tag[0] === tagName);
+    return event.tags.filter((tag) => tag[0] === tagName);
 }
 /**
  * Checks if an event has a specific tag
@@ -135,5 +135,5 @@ export function getEventTags(event, tagName) {
  * @returns {boolean} True if the event has the tag
  */
 export function hasEventTag(event, tagName) {
-    return event.tags.some(tag => tag[0] === tagName);
+    return event.tags.some((tag) => tag[0] === tagName);
 }

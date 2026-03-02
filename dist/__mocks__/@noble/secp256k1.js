@@ -1,11 +1,11 @@
 // Mock implementation of @noble/secp256k1 for testing
-import { bytesToHex as originalBytesToHex, hexToBytes as originalHexToBytes } from "@noble/hashes/utils";
+import { bytesToHex as originalBytesToHex, hexToBytes as originalHexToBytes, } from "@noble/hashes/utils";
 function ensureUint8Array(input) {
     if (input instanceof Uint8Array)
         return input;
-    if (typeof input === 'string')
+    if (typeof input === "string")
         return originalHexToBytes(input);
-    throw new Error('Input must be Uint8Array or hex string');
+    throw new Error("Input must be Uint8Array or hex string");
 }
 function createMockPublicKey(privateKey) {
     // Create a deterministic 33-byte compressed public key
@@ -21,7 +21,7 @@ function createMockPublicKey(privateKey) {
 export function getPublicKey(privateKey) {
     const privKeyBytes = ensureUint8Array(privateKey);
     if (privKeyBytes.length !== 32) {
-        throw new Error('Private key must be 32 bytes');
+        throw new Error("Private key must be 32 bytes");
     }
     return createMockPublicKey(privKeyBytes);
 }
@@ -40,7 +40,7 @@ export const schnorr = {
     },
     verify(signature, message, publicKey) {
         return Promise.resolve(true);
-    }
+    },
 };
 // Mock utility functions
 export const utils = {
@@ -61,10 +61,10 @@ export const utils = {
             privateKey[i] = Math.floor(Math.random() * 256);
         }
         return privateKey;
-    }
+    },
 };
 export default {
     getPublicKey,
     schnorr,
-    utils
+    utils,
 };

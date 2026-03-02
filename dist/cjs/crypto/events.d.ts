@@ -2,8 +2,8 @@
  * @module crypto/events
  * @description Event signing and verification functions for Nostr
  */
-import type { NostrEvent, UnsignedEvent } from '../types/events.js';
-import { ValidationResult } from '../types/keys.js';
+import type { NostrEvent, UnsignedEvent } from "../types/events.js";
+import { ValidationResult } from "../types/keys.js";
 /**
  * Calculates the event hash/ID according to the Nostr protocol
  * @param event - The event to hash

@@ -31,7 +31,7 @@ function hexToNpub(hex) {
         return npubEncode(hex);
     }
     catch (error) {
-        logger_js_1.logger.error({ error, hex }, 'Failed to encode public key to npub');
+        logger_js_1.logger.error({ error, hex }, "Failed to encode public key to npub");
         throw error;
     }
 }
@@ -50,7 +50,7 @@ function hexToNsec(hex) {
         return nsecEncode(hex);
     }
     catch (error) {
-        logger_js_1.logger.error({ error, hex }, 'Failed to encode private key to nsec');
+        logger_js_1.logger.error({ error }, "Failed to encode private key to nsec");
         throw error;
     }
 }
@@ -68,7 +68,7 @@ function hexToNote(hex) {
         return noteEncode(hex);
     }
     catch (error) {
-        logger_js_1.logger.error({ error, hex }, 'Failed to encode event ID to note');
+        logger_js_1.logger.error({ error, hex }, "Failed to encode event ID to note");
         throw error;
     }
 }
@@ -86,7 +86,7 @@ function decode(str) {
         return nip19Decode(str);
     }
     catch (error) {
-        logger_js_1.logger.error({ error, str }, 'Failed to decode bech32 string');
+        logger_js_1.logger.error({ error }, "Failed to decode bech32 string");
         throw error;
     }
 }
@@ -103,13 +103,13 @@ function decode(str) {
 function nsecToHex(nsec) {
     try {
         const decoded = decode(nsec);
-        if (decoded.type !== 'nsec') {
-            throw new Error(`Invalid nsec format: ${nsec}`);
+        if (decoded.type !== "nsec") {
+            throw new Error("Invalid nsec format");
         }
         return decoded.data;
     }
     catch (error) {
-        logger_js_1.logger.error({ error, nsec }, 'Failed to convert nsec to hex');
+        logger_js_1.logger.error({ error }, "Failed to convert nsec to hex");
         throw error;
     }
 }
@@ -125,13 +125,13 @@ function nsecToHex(nsec) {
 function npubToHex(npub) {
     try {
         const decoded = decode(npub);
-        if (decoded.type !== 'npub') {
+        if (decoded.type !== "npub") {
             throw new Error(`Invalid npub format: ${npub}`);
         }
         return decoded.data;
     }
     catch (error) {
-        logger_js_1.logger.error({ error, npub }, 'Failed to convert npub to hex');
+        logger_js_1.logger.error({ error, npub }, "Failed to convert npub to hex");
         throw error;
     }
 }

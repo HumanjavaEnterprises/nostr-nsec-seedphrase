@@ -55,12 +55,16 @@ exports.hexToNsec = hexToNsec;
 exports.signMessage = signMessage;
 exports.verifySignature = verifySignature;
 exports.nsecToPrivateKey = nsecToPrivateKey;
+exports.toNcryptsec = toNcryptsec;
+exports.fromNcryptsec = fromNcryptsec;
 const bip39_1 = require("bip39");
 const secp256k1 = __importStar(require("@noble/secp256k1"));
+const secp256k1_1 = require("@noble/curves/secp256k1");
 const utils_1 = require("@noble/hashes/utils");
 const sha256_1 = require("@noble/hashes/sha256");
 const hmac_1 = require("@noble/hashes/hmac");
 const bech32_1 = require("bech32");
+const nostr_crypto_utils_1 = require("nostr-crypto-utils");
 const logger_1 = require("./utils/logger");
 /**
  * Generates a new BIP39 seed phrase
@@ -98,8 +102,8 @@ function getEntropyFromSeedPhrase(seedPhrase) {
  * console.log(isValid); // true
  */
 function validateSeedPhrase(seedPhrase) {
-    logger_1.logger.log({ seedPhrase }, "Validating seed phrase");
-    logger_1.logger.log({ seedPhrase }, "Input being validated");
+    logger_1.logger.log("Validating seed phrase");
+    logger_1.logger.log("Input being validated");
     const isValid = (0, bip39_1.validateMnemonic)(seedPhrase);
     logger_1.logger.log({ isValid }, "Validated seed phrase");
     return Boolean(isValid);
@@ -121,7 +125,9 @@ function seedPhraseToKeyPair(seedPhrase) {
         const entropy = getEntropyFromSeedPhrase(seedPhrase);
         // Hash the entropy to generate a proper private key
         const privateKeyBytes = (0, sha256_1.sha256)(entropy);
+        entropy.fill(0); // zero sensitive material
         const privateKeyHex = (0, utils_1.bytesToHex)(privateKeyBytes);
+        privateKeyBytes.fill(0); // zero sensitive material
         // Derive the public key
         const publicKeyBytes = secp256k1.getPublicKey(privateKeyHex, true); // Force compressed format
         const publicKey = (0, utils_1.bytesToHex)(publicKeyBytes);
@@ -170,10 +176,12 @@ function fromHex(privateKeyHex) {
         // Validate the private key
         const privateKeyBytes = (0, utils_1.hexToBytes)(privateKeyHex);
         if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+            privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
         // Derive the public key
         const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        privateKeyBytes.fill(0); // zero sensitive material
         const publicKey = (0, utils_1.bytesToHex)(publicKeyBytes);
         // Generate the nsec and npub formats
         const nsec = exports.nip19.nsecEncode(privateKeyHex);
@@ -203,6 +211,7 @@ function getPublicKey(privateKey) {
     try {
         const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
         const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        privateKeyBytes.fill(0); // zero sensitive material
         return (0, utils_1.bytesToHex)(publicKeyBytes);
     }
     catch (error) {
@@ -293,9 +302,9 @@ exports.nip19 = {
         const data = bech32_1.bech32.fromWords(words);
         return {
             type: prefix,
-            data: data instanceof Uint8Array ? data : Uint8Array.from(data)
+            data: data instanceof Uint8Array ? data : Uint8Array.from(data),
         };
-    }
+    },
 };
 /**
  * Calculates the event hash/ID according to the Nostr protocol
@@ -331,9 +340,11 @@ function getEventHash(event) {
 async function signEvent(event, privateKey) {
     try {
         const eventHash = getEventHash(event);
-        const signature = await secp256k1.sign((0, utils_1.hexToBytes)(eventHash), (0, utils_1.hexToBytes)(privateKey));
+        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
+        const signature = secp256k1_1.schnorr.sign(eventHash, privateKeyBytes);
+        privateKeyBytes.fill(0); // zero sensitive material
         logger_1.logger.log("Event signed successfully");
-        return (0, utils_1.bytesToHex)(signature.toCompactRawBytes());
+        return (0, utils_1.bytesToHex)(signature);
     }
     catch (error) {
         logger_1.logger.error("Failed to sign event:", error?.toString());
@@ -360,7 +371,7 @@ async function verifyEvent(event) {
             return false;
         }
         logger_1.logger.log("Verifying event signature");
-        return await secp256k1.verify((0, utils_1.hexToBytes)(event.sig), (0, utils_1.hexToBytes)(hash), (0, utils_1.hexToBytes)(event.pubkey));
+        return secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(event.sig), hash, (0, utils_1.hexToBytes)(event.pubkey));
     }
     catch (error) {
         logger_1.logger.error("Failed to verify event:", error?.toString());
@@ -384,14 +395,16 @@ function configureHMAC() {
         messages.forEach((msg) => h.update(msg));
         return h.digest();
     };
-    // Type assertion to handle the utils property
-    secp256k1.utils = {
-        ...secp256k1.utils,
-        hmacSha256: hmacFunction,
-        hmacSha256Sync: hmacSyncFunction,
-    };
+    // Safety check: only patch if utils exists and hmacSha256Sync is a known property
+    if ("utils" in secp256k1 &&
+        typeof secp256k1.utils?.hmacSha256Sync !== "undefined") {
+        secp256k1.utils.hmacSha256 = hmacFunction;
+        secp256k1.utils.hmacSha256Sync = hmacSyncFunction;
+    }
+    else {
+        logger_1.logger.log("secp256k1.utils.hmacSha256Sync not found; HMAC configuration skipped (library may handle HMAC internally)");
+    }
     logger_1.logger.log("Configured HMAC for secp256k1");
-    logger_1.logger.log("secp256k1.utils after configuration:", secp256k1.utils);
 }
 /**
  * Creates a new signed Nostr event
@@ -471,6 +484,7 @@ function privateKeyToNpub(privateKey) {
     try {
         const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
         const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
+        privateKeyBytes.fill(0); // zero sensitive material
         return exports.nip19.npubEncode((0, utils_1.bytesToHex)(publicKey));
     }
     catch (error) {
@@ -573,9 +587,12 @@ async function signMessage(message, privateKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = (0, sha256_1.sha256)(messageBytes);
-        const signature = await secp256k1.sign(messageHash, (0, utils_1.hexToBytes)(privateKey));
+        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
+        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
+        const signature = secp256k1_1.schnorr.sign(messageHashHex, privateKeyBytes);
+        privateKeyBytes.fill(0); // zero sensitive material
         logger_1.logger.log("Message signed successfully");
-        return (0, utils_1.bytesToHex)(signature.toCompactRawBytes());
+        return (0, utils_1.bytesToHex)(signature);
     }
     catch (error) {
         logger_1.logger.error("Failed to sign message:", error?.toString());
@@ -596,8 +613,9 @@ async function verifySignature(message, signature, publicKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = (0, sha256_1.sha256)(messageBytes);
+        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
         logger_1.logger.log("Verifying message signature");
-        return await secp256k1.verify((0, utils_1.hexToBytes)(signature), messageHash, (0, utils_1.hexToBytes)(publicKey));
+        return secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(signature), messageHashHex, (0, utils_1.hexToBytes)(publicKey));
     }
     catch (error) {
         logger_1.logger.error("Failed to verify signature:", error?.toString());
@@ -619,6 +637,51 @@ function nsecToPrivateKey(nsec) {
     }
     catch (error) {
         logger_1.logger.error("Failed to decode nsec:", error?.toString());
+        throw error;
+    }
+}
+/**
+ * Encrypts a hex private key into an ncryptsec bech32 string (NIP-49)
+ * @param {string} privateKeyHex - The hex-encoded private key (64 hex chars / 32 bytes)
+ * @param {string} password - The password to encrypt with
+ * @param {number} [logn=16] - Scrypt log2(N) parameter (higher = slower but more secure)
+ * @returns {string} The bech32-encoded ncryptsec string
+ * @throws {Error} If encryption fails
+ * @example
+ * const ncryptsec = toNcryptsec("1234567890abcdef...", "my-strong-password");
+ * console.log(ncryptsec); // "ncryptsec1..."
+ */
+function toNcryptsec(privateKeyHex, password, logn = 16) {
+    try {
+        const secretBytes = (0, utils_1.hexToBytes)(privateKeyHex);
+        const result = nostr_crypto_utils_1.nip49.encrypt(secretBytes, password, logn);
+        secretBytes.fill(0); // zero sensitive material
+        return result;
+    }
+    catch (error) {
+        logger_1.logger.error("Failed to encrypt private key to ncryptsec:", error?.toString());
+        throw error;
+    }
+}
+/**
+ * Decrypts an ncryptsec bech32 string back to a hex private key (NIP-49)
+ * @param {string} ncryptsec - The bech32-encoded ncryptsec string
+ * @param {string} password - The password used for encryption
+ * @returns {string} The hex-encoded private key
+ * @throws {Error} If decryption fails (wrong password, invalid format, etc.)
+ * @example
+ * const privateKeyHex = fromNcryptsec("ncryptsec1...", "my-strong-password");
+ * console.log(privateKeyHex); // "1234567890abcdef..."
+ */
+function fromNcryptsec(ncryptsec, password) {
+    try {
+        const secretBytes = nostr_crypto_utils_1.nip49.decrypt(ncryptsec, password);
+        const hex = (0, utils_1.bytesToHex)(secretBytes);
+        secretBytes.fill(0); // zero sensitive material
+        return hex;
+    }
+    catch (error) {
+        logger_1.logger.error("Failed to decrypt ncryptsec:", error?.toString());
         throw error;
     }
 }
