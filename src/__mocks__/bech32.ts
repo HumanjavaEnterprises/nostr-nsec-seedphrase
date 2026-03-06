@@ -1,5 +1,5 @@
 // Mock implementation of bech32 for testing
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 
 function toWords(data: Uint8Array): number[] {
   // Convert bytes to 5-bit words
@@ -38,7 +38,7 @@ function decode(
   const bytes = hexToBytes(data);
   return {
     prefix,
-    words: Array.from(bytes).map((b) => b & 0x1f), // Convert to 5-bit words
+    words: Array.from(bytes).map((b: number) => b & 0x1f), // Convert to 5-bit words
   };
 }
 

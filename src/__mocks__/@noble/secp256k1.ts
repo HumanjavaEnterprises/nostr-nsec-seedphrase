@@ -2,7 +2,7 @@
 import {
   bytesToHex as originalBytesToHex,
   hexToBytes as originalHexToBytes,
-} from "@noble/hashes/utils";
+} from "@noble/hashes/utils.js";
 
 function ensureUint8Array(input: Uint8Array | string): Uint8Array {
   if (input instanceof Uint8Array) return input;

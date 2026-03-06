@@ -5,7 +5,7 @@ import path from 'path';
 const emptyNodeBuiltins = {
   name: 'empty-node-builtins',
   setup(build) {
-    const builtins = ['crypto', 'stream', 'os', 'fs', 'http', 'https',
+    const builtins = ['buffer', 'crypto', 'stream', 'os', 'fs', 'http', 'https',
       'util', 'zlib', 'vm', 'assert', 'net', 'tls', 'child_process'];
     const filter = new RegExp(`^(${builtins.join('|')})$`);
 

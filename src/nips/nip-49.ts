@@ -6,7 +6,7 @@
  */
 
 import { nip49 } from "nostr-crypto-utils";
-import { hexToBytes, bytesToHex } from "@noble/hashes/utils";
+import { hexToBytes, bytesToHex } from "@noble/hashes/utils.js";
 import { logger } from "../utils/logger.js";
 
 /**

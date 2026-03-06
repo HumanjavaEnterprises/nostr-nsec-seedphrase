@@ -1,5 +1,5 @@
 // Mock implementation of bip39 for testing
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 
 const VALID_SEED_PHRASE =
   "witch collapse practice feed shame open despair creek road again ice least";

@@ -4,9 +4,9 @@
  * @see https://github.com/nostr-protocol/nips/blob/master/26.md
  */
 
-import { schnorr } from "@noble/curves/secp256k1";
-import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { schnorr } from "@noble/curves/secp256k1.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { logger } from "../utils/logger.js";
 import { ValidationResult } from "../types/index.js";
 
@@ -69,7 +69,7 @@ export async function createDelegation(
 ): Promise<DelegationToken> {
   try {
     // Get delegator's public key
-    const delegator = bytesToHex(schnorr.getPublicKey(delegatorPrivateKey));
+    const delegator = bytesToHex(schnorr.getPublicKey(hexToBytes(delegatorPrivateKey)));
 
     // Create delegation string
     const tokenString = createDelegationString(
@@ -80,7 +80,7 @@ export async function createDelegation(
 
     // Sign the token
     const messageHash = sha256(new TextEncoder().encode(tokenString));
-    const signature = await schnorr.sign(messageHash, delegatorPrivateKey);
+    const signature = await schnorr.sign(messageHash, hexToBytes(delegatorPrivateKey));
 
     logger.log("Created delegation token");
     return {
@@ -132,9 +132,9 @@ async function verifyDelegation(
     const messageHash = sha256(new TextEncoder().encode(tokenString));
 
     const isValid = await schnorr.verify(
-      tokenObject.signature,
+      hexToBytes(tokenObject.signature),
       messageHash,
-      tokenObject.delegator,
+      hexToBytes(tokenObject.delegator),
     );
 
     return {

@@ -3,27 +3,7 @@
 // They are intentionally hardcoded to ensure deterministic testing.
 
 // Mock dependencies
-vi.mock("@noble/secp256k1", () => {
-  const TEST_PUBLIC_KEY =
-    "02030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021";
-
-  return {
-    getPublicKey: () => new Uint8Array(hexToBytes(TEST_PUBLIC_KEY)),
-    utils: {
-      bytesToHex: (bytes: Uint8Array) =>
-        Array.from(bytes)
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join(""),
-      hexToBytes: (hex: string) =>
-        new Uint8Array(
-          hex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
-        ),
-      isValidPrivateKey: () => true,
-    },
-  };
-});
-
-vi.mock("@noble/curves/secp256k1", () => {
+vi.mock("@noble/curves/secp256k1.js", () => {
   let lastSignedHash = "";
 
   return {
@@ -53,7 +33,15 @@ vi.mock("@noble/curves/secp256k1", () => {
       getPublicKey: () => new Uint8Array(32).fill(2),
     },
     secp256k1: {
+      getPublicKey: (_privKey: Uint8Array, _compressed?: boolean) => {
+        // Return a deterministic 33-byte compressed public key (02 prefix + 32-byte x)
+        const hex = "0202030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021";
+        return new Uint8Array(hex.match(/.{1,2}/g)!.map((b: string) => parseInt(b, 16)));
+      },
       getSharedSecret: () => new Uint8Array(33).fill(3),
+      utils: {
+        isValidSecretKey: () => true,
+      },
     },
   };
 });
@@ -223,7 +211,7 @@ describe("nostr-nsec-seedphrase", () => {
         privateKey:
           "27e2a04464f4e73b9131548b6dffbe47ae49ec7a7562c5a157e6a30f9f1ceb69",
         publicKey:
-          "02030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021",
+          "0202030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021",
         nsec: "nsec1test",
         npub: "npub1test",
         seedPhrase: "",
@@ -322,7 +310,7 @@ describe("nostr-nsec-seedphrase", () => {
 
       // Test key format
       expect(keyPair.privateKey).toMatch(/^[0-9a-f]{64}$/);
-      expect(keyPair.publicKey).toMatch(/^[0-9a-f]{64}$/);
+      expect(keyPair.publicKey).toMatch(/^[0-9a-f]{66}$/);
       expect(keyPair.nsec).toMatch(/^nsec1/);
       expect(keyPair.npub).toMatch(/^npub1/);
 

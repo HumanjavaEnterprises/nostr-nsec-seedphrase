@@ -1,5 +1,5 @@
 import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from "bip39";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { logger } from "../utils/logger";
 
 /**
