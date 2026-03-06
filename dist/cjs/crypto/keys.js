@@ -15,28 +15,28 @@ exports.fromHex = fromHex;
 exports.validateKeyPair = validateKeyPair;
 exports.validatePublicKey = validatePublicKey;
 const bip39_1 = require("bip39");
-const secp256k1_1 = require("@noble/curves/secp256k1");
-const utils_1 = require("@noble/hashes/utils");
-const sha256_1 = require("@noble/hashes/sha256");
+const secp256k1_js_1 = require("@noble/curves/secp256k1.js");
+const utils_js_1 = require("@noble/hashes/utils.js");
+const sha2_js_1 = require("@noble/hashes/sha2.js");
 const logger_js_1 = require("../utils/logger.js");
 const nip_19_js_1 = require("../nips/nip-19.js");
 /**
  * Gets the compressed public key (33 bytes with prefix)
  */
 function getCompressedPublicKey(privateKeyBytes) {
-    return secp256k1_1.secp256k1.getPublicKey(privateKeyBytes, true);
+    return secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true);
 }
 /**
  * Gets the schnorr public key (32 bytes x-coordinate) as per BIP340
  */
 function getSchnorrPublicKey(privateKeyBytes) {
-    return secp256k1_1.schnorr.getPublicKey(privateKeyBytes);
+    return secp256k1_js_1.schnorr.getPublicKey(privateKeyBytes);
 }
 /**
  * Creates a PublicKeyDetails object from a hex string
  */
 function createPublicKey(hex) {
-    const bytes = (0, utils_1.hexToBytes)(hex);
+    const bytes = (0, utils_js_1.hexToBytes)(hex);
     // For schnorr, we need to remove the first byte (compression prefix)
     const schnorrBytes = bytes.length === 33 ? bytes.slice(1) : bytes;
     return {
@@ -65,7 +65,7 @@ function getEntropyFromSeedPhrase(seedPhrase) {
         if (!(0, bip39_1.validateMnemonic)(seedPhrase)) {
             throw new Error("Invalid seed phrase");
         }
-        return (0, utils_1.hexToBytes)((0, bip39_1.mnemonicToEntropy)(seedPhrase));
+        return (0, utils_js_1.hexToBytes)((0, bip39_1.mnemonicToEntropy)(seedPhrase));
     }
     catch (error) {
         logger_js_1.logger.error("Failed to get entropy from seed phrase:", error?.toString());
@@ -97,8 +97,8 @@ async function seedPhraseToKeyPair(seedPhrase) {
         const entropy = getEntropyFromSeedPhrase(seedPhrase);
         const privateKey = derivePrivateKey(entropy);
         entropy.fill(0); // zero sensitive material
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
-        const publicKey = createPublicKey((0, utils_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        const publicKey = createPublicKey((0, utils_js_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
         privateKeyBytes.fill(0); // zero sensitive material
         return {
             privateKey,
@@ -120,8 +120,8 @@ async function seedPhraseToKeyPair(seedPhrase) {
 function derivePrivateKey(entropy) {
     try {
         // Hash the entropy to get a valid private key
-        const privateKeyBytes = (0, sha256_1.sha256)(entropy);
-        const hex = (0, utils_1.bytesToHex)(privateKeyBytes);
+        const privateKeyBytes = (0, sha2_js_1.sha256)(entropy);
+        const hex = (0, utils_js_1.bytesToHex)(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         return hex;
     }
@@ -146,12 +146,12 @@ async function generateKeyPairWithSeed() {
  */
 async function fromHex(privateKeyHex) {
     try {
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKeyHex);
-        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKeyHex);
+        if (!secp256k1_js_1.secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
             privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
-        const publicKey = createPublicKey((0, utils_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
+        const publicKey = createPublicKey((0, utils_js_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
         privateKeyBytes.fill(0); // zero sensitive material
         return {
             privateKey: privateKeyHex,
@@ -173,8 +173,8 @@ async function fromHex(privateKeyHex) {
  */
 async function validateKeyPair(publicKey, privateKey) {
     try {
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
-        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        if (!secp256k1_js_1.secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
             privateKeyBytes.fill(0); // zero sensitive material
             return {
                 isValid: false,
@@ -182,7 +182,7 @@ async function validateKeyPair(publicKey, privateKey) {
             };
         }
         const pubKeyHex = typeof publicKey === "string" ? publicKey : publicKey.hex;
-        const derivedPublicKey = (0, utils_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes));
+        const derivedPublicKey = (0, utils_js_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes));
         privateKeyBytes.fill(0); // zero sensitive material
         if (pubKeyHex !== derivedPublicKey) {
             return {
@@ -209,7 +209,7 @@ async function validateKeyPair(publicKey, privateKey) {
  */
 function validatePublicKey(publicKey) {
     try {
-        const bytes = (0, utils_1.hexToBytes)(publicKey);
+        const bytes = (0, utils_js_1.hexToBytes)(publicKey);
         return bytes.length === 32 || bytes.length === 33;
     }
     catch (error) {

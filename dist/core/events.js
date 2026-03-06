@@ -48,7 +48,7 @@ export async function createEvent(content, kind, privateKey, tags = []) {
         };
     }
     catch (error) {
-        logger.error("Failed to create event:", error);
+        logger.error({ error }, "Failed to create event");
         throw new Error("Failed to create event");
     }
 }
@@ -86,7 +86,7 @@ export function validateEventStructure(event) {
         return true;
     }
     catch (error) {
-        logger.error("Failed to validate event structure:", error);
+        logger.error({ error }, "Failed to validate event structure");
         return false;
     }
 }
@@ -107,7 +107,7 @@ export function serializeEvent(event) {
         ]);
     }
     catch (error) {
-        logger.error("Failed to serialize event:", error);
+        logger.error({ error }, "Failed to serialize event");
         throw new Error("Failed to serialize event");
     }
 }

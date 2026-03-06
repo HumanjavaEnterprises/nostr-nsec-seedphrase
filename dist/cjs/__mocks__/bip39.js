@@ -4,7 +4,7 @@ exports.generateMnemonic = generateMnemonic;
 exports.validateMnemonic = validateMnemonic;
 exports.mnemonicToEntropy = mnemonicToEntropy;
 // Mock implementation of bip39 for testing
-const utils_1 = require("@noble/hashes/utils");
+const utils_js_1 = require("@noble/hashes/utils.js");
 const VALID_SEED_PHRASE = "witch collapse practice feed shame open despair creek road again ice least";
 const VALID_ENTROPY = "000102030405060708090a0b0c0d0e0f";
 function generateMnemonic() {
@@ -39,5 +39,5 @@ function mnemonicToEntropy(mnemonic) {
     for (let i = 0; i < 16; i++) {
         entropy[i] = (i + 1) % 256; // Simple deterministic pattern
     }
-    return (0, utils_1.bytesToHex)(entropy);
+    return (0, utils_js_1.bytesToHex)(entropy);
 }

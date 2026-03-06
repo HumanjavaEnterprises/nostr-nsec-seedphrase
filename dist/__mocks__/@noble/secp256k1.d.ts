@@ -1,4 +1,4 @@
-import { bytesToHex as originalBytesToHex, hexToBytes as originalHexToBytes } from "@noble/hashes/utils";
+import { bytesToHex as originalBytesToHex, hexToBytes as originalHexToBytes } from "@noble/hashes/utils.js";
 export declare function getPublicKey(privateKey: Uint8Array | string): Uint8Array;
 export declare const schnorr: {
     sign(message: Uint8Array | string, privateKey: Uint8Array | string): Promise<Uint8Array>;

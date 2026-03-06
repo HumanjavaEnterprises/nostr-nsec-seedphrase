@@ -9,7 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.toNcryptsec = toNcryptsec;
 exports.fromNcryptsec = fromNcryptsec;
 const nostr_crypto_utils_1 = require("nostr-crypto-utils");
-const utils_1 = require("@noble/hashes/utils");
+const utils_js_1 = require("@noble/hashes/utils.js");
 const logger_js_1 = require("../utils/logger.js");
 /**
  * Encrypts a hex private key into an ncryptsec bech32 string
@@ -24,7 +24,7 @@ const logger_js_1 = require("../utils/logger.js");
  */
 function toNcryptsec(privateKeyHex, password, logn = 16) {
     try {
-        const secretBytes = (0, utils_1.hexToBytes)(privateKeyHex);
+        const secretBytes = (0, utils_js_1.hexToBytes)(privateKeyHex);
         const result = nostr_crypto_utils_1.nip49.encrypt(secretBytes, password, logn);
         secretBytes.fill(0); // zero sensitive material
         return result;
@@ -47,7 +47,7 @@ function toNcryptsec(privateKeyHex, password, logn = 16) {
 function fromNcryptsec(ncryptsec, password) {
     try {
         const secretBytes = nostr_crypto_utils_1.nip49.decrypt(ncryptsec, password);
-        const hex = (0, utils_1.bytesToHex)(secretBytes);
+        const hex = (0, utils_js_1.bytesToHex)(secretBytes);
         secretBytes.fill(0); // zero sensitive material
         return hex;
     }

@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.nip19 = void 0;
 exports.generateSeedPhrase = generateSeedPhrase;
@@ -58,11 +25,10 @@ exports.nsecToPrivateKey = nsecToPrivateKey;
 exports.toNcryptsec = toNcryptsec;
 exports.fromNcryptsec = fromNcryptsec;
 const bip39_1 = require("bip39");
-const secp256k1 = __importStar(require("@noble/secp256k1"));
-const secp256k1_1 = require("@noble/curves/secp256k1");
-const utils_1 = require("@noble/hashes/utils");
-const sha256_1 = require("@noble/hashes/sha256");
-const hmac_1 = require("@noble/hashes/hmac");
+const secp256k1_js_1 = require("@noble/curves/secp256k1.js");
+const utils_js_1 = require("@noble/hashes/utils.js");
+const sha2_js_1 = require("@noble/hashes/sha2.js");
+const hmac_js_1 = require("@noble/hashes/hmac.js");
 const bech32_1 = require("bech32");
 const nostr_crypto_utils_1 = require("nostr-crypto-utils");
 const logger_1 = require("./utils/logger");
@@ -91,7 +57,7 @@ function getEntropyFromSeedPhrase(seedPhrase) {
     }
     // bip39.mnemonicToEntropy returns a hex string, convert it to Uint8Array
     const entropyHex = (0, bip39_1.mnemonicToEntropy)(seedPhrase);
-    return (0, utils_1.hexToBytes)(entropyHex);
+    return (0, utils_js_1.hexToBytes)(entropyHex);
 }
 /**
  * Validates a BIP39 seed phrase
@@ -124,13 +90,13 @@ function seedPhraseToKeyPair(seedPhrase) {
     try {
         const entropy = getEntropyFromSeedPhrase(seedPhrase);
         // Hash the entropy to generate a proper private key
-        const privateKeyBytes = (0, sha256_1.sha256)(entropy);
+        const privateKeyBytes = (0, sha2_js_1.sha256)(entropy);
         entropy.fill(0); // zero sensitive material
-        const privateKeyHex = (0, utils_1.bytesToHex)(privateKeyBytes);
+        const privateKeyHex = (0, utils_js_1.bytesToHex)(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         // Derive the public key
-        const publicKeyBytes = secp256k1.getPublicKey(privateKeyHex, true); // Force compressed format
-        const publicKey = (0, utils_1.bytesToHex)(publicKeyBytes);
+        const publicKeyBytes = secp256k1_js_1.secp256k1.getPublicKey((0, utils_js_1.hexToBytes)(privateKeyHex), true); // Force compressed format
+        const publicKey = (0, utils_js_1.bytesToHex)(publicKeyBytes);
         // Generate the nsec and npub formats
         const nsec = exports.nip19.nsecEncode(privateKeyHex);
         const npub = exports.nip19.npubEncode(publicKey);
@@ -174,15 +140,15 @@ function generateKeyPairWithSeed() {
 function fromHex(privateKeyHex) {
     try {
         // Validate the private key
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKeyHex);
-        if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKeyHex);
+        if (!secp256k1_js_1.secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
             privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
         // Derive the public key
-        const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        const publicKeyBytes = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
         privateKeyBytes.fill(0); // zero sensitive material
-        const publicKey = (0, utils_1.bytesToHex)(publicKeyBytes);
+        const publicKey = (0, utils_js_1.bytesToHex)(publicKeyBytes);
         // Generate the nsec and npub formats
         const nsec = exports.nip19.nsecEncode(privateKeyHex);
         const npub = exports.nip19.npubEncode(publicKey);
@@ -209,10 +175,10 @@ function fromHex(privateKeyHex) {
  */
 function getPublicKey(privateKey) {
     try {
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
-        const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        const publicKeyBytes = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
         privateKeyBytes.fill(0); // zero sensitive material
-        return (0, utils_1.bytesToHex)(publicKeyBytes);
+        return (0, utils_js_1.bytesToHex)(publicKeyBytes);
     }
     catch (error) {
         logger_1.logger.error("Failed to get public key:", error?.toString());
@@ -230,7 +196,7 @@ exports.nip19 = {
      * @returns {string} The bech32-encoded npub string
      */
     npubEncode(pubkey) {
-        const data = (0, utils_1.hexToBytes)(pubkey);
+        const data = (0, utils_js_1.hexToBytes)(pubkey);
         const words = bech32_1.bech32.toWords(Uint8Array.from(data));
         return bech32_1.bech32.encode("npub", words, 1000);
     },
@@ -244,7 +210,7 @@ exports.nip19 = {
         if (prefix !== "npub")
             throw new Error("Invalid npub: wrong prefix");
         const data = bech32_1.bech32.fromWords(words);
-        return (0, utils_1.bytesToHex)(data instanceof Uint8Array ? data : Uint8Array.from(data));
+        return (0, utils_js_1.bytesToHex)(data instanceof Uint8Array ? data : Uint8Array.from(data));
     },
     /**
      * Encodes a private key into nsec format
@@ -252,7 +218,7 @@ exports.nip19 = {
      * @returns {string} The bech32-encoded nsec string
      */
     nsecEncode(privkey) {
-        const data = (0, utils_1.hexToBytes)(privkey);
+        const data = (0, utils_js_1.hexToBytes)(privkey);
         const words = bech32_1.bech32.toWords(Uint8Array.from(data));
         return bech32_1.bech32.encode("nsec", words, 1000);
     },
@@ -266,7 +232,7 @@ exports.nip19 = {
         if (prefix !== "nsec")
             throw new Error("Invalid nsec: wrong prefix");
         const data = bech32_1.bech32.fromWords(words);
-        return (0, utils_1.bytesToHex)(data instanceof Uint8Array ? data : Uint8Array.from(data));
+        return (0, utils_js_1.bytesToHex)(data instanceof Uint8Array ? data : Uint8Array.from(data));
     },
     /**
      * Encodes an event ID into note format
@@ -274,7 +240,7 @@ exports.nip19 = {
      * @returns {string} The bech32-encoded note string
      */
     noteEncode(eventId) {
-        const data = (0, utils_1.hexToBytes)(eventId);
+        const data = (0, utils_js_1.hexToBytes)(eventId);
         const words = bech32_1.bech32.toWords(Uint8Array.from(data));
         return bech32_1.bech32.encode("note", words, 1000);
     },
@@ -288,7 +254,7 @@ exports.nip19 = {
         if (prefix !== "note")
             throw new Error("Invalid note: wrong prefix");
         const data = bech32_1.bech32.fromWords(words);
-        return (0, utils_1.bytesToHex)(data instanceof Uint8Array ? data : Uint8Array.from(data));
+        return (0, utils_js_1.bytesToHex)(data instanceof Uint8Array ? data : Uint8Array.from(data));
     },
     /**
      * Decodes any bech32-encoded Nostr entity
@@ -320,7 +286,7 @@ function getEventHash(event) {
         event.tags,
         event.content,
     ]);
-    return (0, utils_1.bytesToHex)((0, sha256_1.sha256)(new TextEncoder().encode(serialized)));
+    return (0, utils_js_1.bytesToHex)((0, sha2_js_1.sha256)(new TextEncoder().encode(serialized)));
 }
 /**
  * Signs a Nostr event
@@ -340,11 +306,11 @@ function getEventHash(event) {
 async function signEvent(event, privateKey) {
     try {
         const eventHash = getEventHash(event);
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
-        const signature = secp256k1_1.schnorr.sign(eventHash, privateKeyBytes);
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        const signature = secp256k1_js_1.schnorr.sign((0, utils_js_1.hexToBytes)(eventHash), privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         logger_1.logger.log("Event signed successfully");
-        return (0, utils_1.bytesToHex)(signature);
+        return (0, utils_js_1.bytesToHex)(signature);
     }
     catch (error) {
         logger_1.logger.error("Failed to sign event:", error?.toString());
@@ -371,7 +337,7 @@ async function verifyEvent(event) {
             return false;
         }
         logger_1.logger.log("Verifying event signature");
-        return secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(event.sig), hash, (0, utils_1.hexToBytes)(event.pubkey));
+        return secp256k1_js_1.schnorr.verify((0, utils_js_1.hexToBytes)(event.sig), (0, utils_js_1.hexToBytes)(hash), (0, utils_js_1.hexToBytes)(event.pubkey));
     }
     catch (error) {
         logger_1.logger.error("Failed to verify event:", error?.toString());
@@ -386,20 +352,20 @@ async function verifyEvent(event) {
  */
 function configureHMAC() {
     const hmacFunction = (key, ...messages) => {
-        const h = hmac_1.hmac.create(sha256_1.sha256, key);
+        const h = hmac_js_1.hmac.create(sha2_js_1.sha256, key);
         messages.forEach((msg) => h.update(msg));
         return h.digest();
     };
     const hmacSyncFunction = (key, ...messages) => {
-        const h = hmac_1.hmac.create(sha256_1.sha256, key);
+        const h = hmac_js_1.hmac.create(sha2_js_1.sha256, key);
         messages.forEach((msg) => h.update(msg));
         return h.digest();
     };
     // Safety check: only patch if utils exists and hmacSha256Sync is a known property
-    if ("utils" in secp256k1 &&
-        typeof secp256k1.utils?.hmacSha256Sync !== "undefined") {
-        secp256k1.utils.hmacSha256 = hmacFunction;
-        secp256k1.utils.hmacSha256Sync = hmacSyncFunction;
+    if ("utils" in secp256k1_js_1.secp256k1 &&
+        typeof secp256k1_js_1.secp256k1.utils?.hmacSha256Sync !== "undefined") {
+        secp256k1_js_1.secp256k1.utils.hmacSha256 = hmacFunction;
+        secp256k1_js_1.secp256k1.utils.hmacSha256Sync = hmacSyncFunction;
     }
     else {
         logger_1.logger.log("secp256k1.utils.hmacSha256Sync not found; HMAC configuration skipped (library may handle HMAC internally)");
@@ -482,10 +448,10 @@ function privateKeyToNsec(privateKey) {
  */
 function privateKeyToNpub(privateKey) {
     try {
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
-        const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        const publicKey = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true);
         privateKeyBytes.fill(0); // zero sensitive material
-        return exports.nip19.npubEncode((0, utils_1.bytesToHex)(publicKey));
+        return exports.nip19.npubEncode((0, utils_js_1.bytesToHex)(publicKey));
     }
     catch (error) {
         logger_1.logger.error("Failed to encode npub:", error?.toString());
@@ -528,7 +494,7 @@ function npubToHex(npub) {
             throw new Error("Invalid npub format");
         }
         logger_1.logger.log("Converted npub to hex");
-        return (0, utils_1.bytesToHex)(data);
+        return (0, utils_js_1.bytesToHex)(data);
     }
     catch (error) {
         logger_1.logger.error("Failed to decode npub:", error?.toString());
@@ -586,13 +552,13 @@ function hexToNsec(privateKeyHex) {
 async function signMessage(message, privateKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
-        const messageHash = (0, sha256_1.sha256)(messageBytes);
-        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
-        const privateKeyBytes = (0, utils_1.hexToBytes)(privateKey);
-        const signature = secp256k1_1.schnorr.sign(messageHashHex, privateKeyBytes);
+        const messageHash = (0, sha2_js_1.sha256)(messageBytes);
+        const messageHashHex = (0, utils_js_1.bytesToHex)(messageHash);
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        const signature = secp256k1_js_1.schnorr.sign((0, utils_js_1.hexToBytes)(messageHashHex), privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         logger_1.logger.log("Message signed successfully");
-        return (0, utils_1.bytesToHex)(signature);
+        return (0, utils_js_1.bytesToHex)(signature);
     }
     catch (error) {
         logger_1.logger.error("Failed to sign message:", error?.toString());
@@ -612,10 +578,10 @@ async function signMessage(message, privateKey) {
 async function verifySignature(message, signature, publicKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
-        const messageHash = (0, sha256_1.sha256)(messageBytes);
-        const messageHashHex = (0, utils_1.bytesToHex)(messageHash);
+        const messageHash = (0, sha2_js_1.sha256)(messageBytes);
+        const messageHashHex = (0, utils_js_1.bytesToHex)(messageHash);
         logger_1.logger.log("Verifying message signature");
-        return secp256k1_1.schnorr.verify((0, utils_1.hexToBytes)(signature), messageHashHex, (0, utils_1.hexToBytes)(publicKey));
+        return secp256k1_js_1.schnorr.verify((0, utils_js_1.hexToBytes)(signature), (0, utils_js_1.hexToBytes)(messageHashHex), (0, utils_js_1.hexToBytes)(publicKey));
     }
     catch (error) {
         logger_1.logger.error("Failed to verify signature:", error?.toString());
@@ -653,7 +619,7 @@ function nsecToPrivateKey(nsec) {
  */
 function toNcryptsec(privateKeyHex, password, logn = 16) {
     try {
-        const secretBytes = (0, utils_1.hexToBytes)(privateKeyHex);
+        const secretBytes = (0, utils_js_1.hexToBytes)(privateKeyHex);
         const result = nostr_crypto_utils_1.nip49.encrypt(secretBytes, password, logn);
         secretBytes.fill(0); // zero sensitive material
         return result;
@@ -676,7 +642,7 @@ function toNcryptsec(privateKeyHex, password, logn = 16) {
 function fromNcryptsec(ncryptsec, password) {
     try {
         const secretBytes = nostr_crypto_utils_1.nip49.decrypt(ncryptsec, password);
-        const hex = (0, utils_1.bytesToHex)(secretBytes);
+        const hex = (0, utils_js_1.bytesToHex)(secretBytes);
         secretBytes.fill(0); // zero sensitive material
         return hex;
     }

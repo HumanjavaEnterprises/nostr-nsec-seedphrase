@@ -1,5 +1,5 @@
 // Mock implementation of bip39 for testing
-import { bytesToHex } from "@noble/hashes/utils";
+import { bytesToHex } from "@noble/hashes/utils.js";
 const VALID_SEED_PHRASE = "witch collapse practice feed shame open despair creek road again ice least";
 const VALID_ENTROPY = "000102030405060708090a0b0c0d0e0f";
 export function generateMnemonic() {

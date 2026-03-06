@@ -7,7 +7,7 @@ exports.stringToBytes = stringToBytes;
 exports.bytesToString = bytesToString;
 exports.hexToBase64 = hexToBase64;
 exports.base64ToHex = base64ToHex;
-const utils_1 = require("@noble/hashes/utils");
+const utils_js_1 = require("@noble/hashes/utils.js");
 const logger_js_1 = __importDefault(require("./logger.js"));
 /**
  * Converts a string to Uint8Array using UTF-8 encoding
@@ -44,7 +44,7 @@ function bytesToString(bytes) {
  */
 function hexToBase64(hex) {
     try {
-        const bytes = (0, utils_1.hexToBytes)(hex);
+        const bytes = (0, utils_js_1.hexToBytes)(hex);
         return btoa(String.fromCharCode(...bytes));
     }
     catch (error) {
@@ -64,7 +64,7 @@ function base64ToHex(base64) {
         for (let i = 0; i < binary.length; i++) {
             bytes[i] = binary.charCodeAt(i);
         }
-        return (0, utils_1.bytesToHex)(bytes);
+        return (0, utils_js_1.bytesToHex)(bytes);
     }
     catch (error) {
         logger_js_1.default.error("Failed to convert base64 to hex:", error?.toString());

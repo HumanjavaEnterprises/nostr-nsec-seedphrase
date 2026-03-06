@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.bech32 = void 0;
 // Mock implementation of bech32 for testing
-const utils_1 = require("@noble/hashes/utils");
+const utils_js_1 = require("@noble/hashes/utils.js");
 function toWords(data) {
     // Convert bytes to 5-bit words
     const words = [];
@@ -23,7 +23,7 @@ function fromWords(words) {
 function encode(prefix, words, limit) {
     // Simple mock encoding: prefix1<hex>
     const data = Uint8Array.from(words);
-    return `${prefix}1${(0, utils_1.bytesToHex)(data)}`;
+    return `${prefix}1${(0, utils_js_1.bytesToHex)(data)}`;
 }
 function decode(str, limit) {
     // Simple mock decoding: split on '1'
@@ -31,7 +31,7 @@ function decode(str, limit) {
     if (!prefix || !data) {
         throw new Error("Invalid bech32 string");
     }
-    const bytes = (0, utils_1.hexToBytes)(data);
+    const bytes = (0, utils_js_1.hexToBytes)(data);
     return {
         prefix,
         words: Array.from(bytes).map((b) => b & 0x1f), // Convert to 5-bit words

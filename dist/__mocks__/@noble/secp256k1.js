@@ -1,5 +1,5 @@
 // Mock implementation of @noble/secp256k1 for testing
-import { bytesToHex as originalBytesToHex, hexToBytes as originalHexToBytes, } from "@noble/hashes/utils";
+import { bytesToHex as originalBytesToHex, hexToBytes as originalHexToBytes, } from "@noble/hashes/utils.js";
 function ensureUint8Array(input) {
     if (input instanceof Uint8Array)
         return input;

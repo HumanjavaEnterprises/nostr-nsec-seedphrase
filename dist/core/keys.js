@@ -1,6 +1,6 @@
-import * as secp256k1 from "@noble/secp256k1";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { sha256 } from "@noble/hashes/sha256";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { pino } from "pino";
 import { generateSeedPhrase, validateSeedPhrase, getEntropyFromSeedPhrase, } from "../bips/bip39.js";
 import { hexToNpub, hexToNsec } from "../nips/nip-19.js";
@@ -23,11 +23,11 @@ const logger = pino({
  */
 export function getPublicKey(privateKey) {
     try {
-        const pubkey = bytesToHex(secp256k1.getPublicKey(privateKey, true));
+        const pubkey = bytesToHex(secp256k1.getPublicKey(hexToBytes(privateKey), true));
         return pubkey;
     }
     catch (error) {
-        logger.error("Failed to derive public key:", error);
+        logger.error({ error }, "Failed to derive public key");
         throw new Error("Failed to derive public key");
     }
 }
@@ -64,7 +64,7 @@ export function fromHex(privateKeyHex) {
         };
     }
     catch (error) {
-        logger.error("Failed to create key pair from hex:", error);
+        logger.error({ error }, "Failed to create key pair from hex");
         throw new Error("Failed to create key pair from hex");
     }
 }
@@ -86,7 +86,7 @@ export function generateKeyPairWithSeed() {
         return seedPhraseToKeyPair(seedPhrase);
     }
     catch (error) {
-        logger.error("Failed to generate key pair with seed:", error);
+        logger.error({ error }, "Failed to generate key pair with seed");
         throw new Error("Failed to generate key pair with seed");
     }
 }
@@ -125,7 +125,7 @@ export function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger.error("Failed to convert seed phrase to key pair:", error);
+        logger.error({ error }, "Failed to convert seed phrase to key pair");
         throw new Error("Failed to convert seed phrase to key pair");
     }
 }
@@ -149,7 +149,7 @@ export function seedPhraseToPrivateKey(seedPhrase) {
         return privateKey;
     }
     catch (error) {
-        logger.error("Failed to convert seed phrase to private key:", error);
+        logger.error({ error }, "Failed to convert seed phrase to private key");
         throw new Error("Failed to convert seed phrase to private key");
     }
 }

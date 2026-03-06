@@ -1,7 +1,7 @@
-import { secp256k1, schnorr } from "@noble/curves/secp256k1";
-import { sha256 } from "@noble/hashes/sha256";
-import { hmac } from "@noble/hashes/hmac";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { secp256k1, schnorr } from "@noble/curves/secp256k1.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { hmac } from "@noble/hashes/hmac.js";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import logger from "../utils/logger.js";
 /**
  * Signs a message with a private key
@@ -14,7 +14,7 @@ export async function sign(message, privateKey) {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = sha256(messageBytes);
         const messageHashHex = bytesToHex(messageHash);
-        const signature = await schnorr.sign(messageHashHex, privateKey);
+        const signature = await schnorr.sign(messageHash, hexToBytes(privateKey));
         return bytesToHex(signature);
     }
     catch (error) {
@@ -33,8 +33,7 @@ export async function verify(signature, message, publicKey) {
     try {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = sha256(messageBytes);
-        const messageHashHex = bytesToHex(messageHash);
-        const isValid = await schnorr.verify(hexToBytes(signature), messageHashHex, hexToBytes(publicKey));
+        const isValid = await schnorr.verify(hexToBytes(signature), messageHash, hexToBytes(publicKey));
         return isValid;
     }
     catch (error) {
@@ -75,7 +74,7 @@ export async function getSharedSecret(privateKey, publicKey) {
     try {
         const privKeyBytes = hexToBytes(privateKey);
         // Nostr uses 32-byte x-only pubkeys; prefix with '02' for compressed format
-        const sharedPoint = secp256k1.getSharedSecret(privKeyBytes, "02" + publicKey);
+        const sharedPoint = secp256k1.getSharedSecret(privKeyBytes, hexToBytes("02" + publicKey));
         // Extract x-coordinate only (bytes 1..33), per Nostr NIP-04 convention
         const sharedX = sharedPoint.slice(1, 33);
         privKeyBytes.fill(0); // zero sensitive material
@@ -136,7 +135,7 @@ export function getEventHash(event) {
 export async function signEvent(event, privateKey) {
     try {
         const eventHash = getEventHash(event);
-        const sig = await schnorr.sign(eventHash, privateKey);
+        const sig = await schnorr.sign(hexToBytes(eventHash), hexToBytes(privateKey));
         return bytesToHex(sig);
     }
     catch (error) {
@@ -158,7 +157,7 @@ export async function verifyEvent(event) {
             tags: event.tags,
             content: event.content,
         });
-        return schnorr.verify(hexToBytes(event.sig), hash, hexToBytes(event.pubkey));
+        return schnorr.verify(hexToBytes(event.sig), hexToBytes(hash), hexToBytes(event.pubkey));
     }
     catch (error) {
         logger.error("Failed to verify event:", error?.toString());
@@ -174,8 +173,7 @@ export async function verifyEvent(event) {
 export async function signMessage(message, privateKey) {
     try {
         const messageHash = sha256(new TextEncoder().encode(message));
-        const messageHashHex = bytesToHex(messageHash);
-        const sig = await schnorr.sign(messageHashHex, privateKey);
+        const sig = await schnorr.sign(messageHash, hexToBytes(privateKey));
         return bytesToHex(sig);
     }
     catch (error) {
@@ -193,8 +191,7 @@ export async function signMessage(message, privateKey) {
 export async function verifyMessage(signature, message, publicKey) {
     try {
         const messageHash = sha256(new TextEncoder().encode(message));
-        const messageHashHex = bytesToHex(messageHash);
-        return await schnorr.verify(hexToBytes(signature), messageHashHex, hexToBytes(publicKey));
+        return await schnorr.verify(hexToBytes(signature), messageHash, hexToBytes(publicKey));
     }
     catch (error) {
         logger.error("Failed to verify message:", error?.toString());

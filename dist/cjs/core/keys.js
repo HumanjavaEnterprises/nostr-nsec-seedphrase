@@ -1,46 +1,13 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPublicKey = getPublicKey;
 exports.fromHex = fromHex;
 exports.generateKeyPairWithSeed = generateKeyPairWithSeed;
 exports.seedPhraseToKeyPair = seedPhraseToKeyPair;
 exports.seedPhraseToPrivateKey = seedPhraseToPrivateKey;
-const secp256k1 = __importStar(require("@noble/secp256k1"));
-const utils_1 = require("@noble/hashes/utils");
-const sha256_1 = require("@noble/hashes/sha256");
+const secp256k1_js_1 = require("@noble/curves/secp256k1.js");
+const utils_js_1 = require("@noble/hashes/utils.js");
+const sha2_js_1 = require("@noble/hashes/sha2.js");
 const pino_1 = require("pino");
 const bip39_js_1 = require("../bips/bip39.js");
 const nip_19_js_1 = require("../nips/nip-19.js");
@@ -63,11 +30,11 @@ const logger = (0, pino_1.pino)({
  */
 function getPublicKey(privateKey) {
     try {
-        const pubkey = (0, utils_1.bytesToHex)(secp256k1.getPublicKey(privateKey, true));
+        const pubkey = (0, utils_js_1.bytesToHex)(secp256k1_js_1.secp256k1.getPublicKey((0, utils_js_1.hexToBytes)(privateKey), true));
         return pubkey;
     }
     catch (error) {
-        logger.error("Failed to derive public key:", error);
+        logger.error({ error }, "Failed to derive public key");
         throw new Error("Failed to derive public key");
     }
 }
@@ -88,7 +55,7 @@ function fromHex(privateKeyHex) {
             throw new Error("Invalid private key format");
         }
         const pubkeyHex = getPublicKey(privateKeyHex);
-        const pubkeyBytes = (0, utils_1.hexToBytes)(pubkeyHex);
+        const pubkeyBytes = (0, utils_js_1.hexToBytes)(pubkeyHex);
         const publicKey = {
             hex: pubkeyHex,
             compressed: pubkeyBytes,
@@ -104,7 +71,7 @@ function fromHex(privateKeyHex) {
         };
     }
     catch (error) {
-        logger.error("Failed to create key pair from hex:", error);
+        logger.error({ error }, "Failed to create key pair from hex");
         throw new Error("Failed to create key pair from hex");
     }
 }
@@ -126,7 +93,7 @@ function generateKeyPairWithSeed() {
         return seedPhraseToKeyPair(seedPhrase);
     }
     catch (error) {
-        logger.error("Failed to generate key pair with seed:", error);
+        logger.error({ error }, "Failed to generate key pair with seed");
         throw new Error("Failed to generate key pair with seed");
     }
 }
@@ -149,7 +116,7 @@ function seedPhraseToKeyPair(seedPhrase) {
         }
         const privateKey = seedPhraseToPrivateKey(seedPhrase);
         const pubkeyHex = getPublicKey(privateKey);
-        const pubkeyBytes = (0, utils_1.hexToBytes)(pubkeyHex);
+        const pubkeyBytes = (0, utils_js_1.hexToBytes)(pubkeyHex);
         const publicKey = {
             hex: pubkeyHex,
             compressed: pubkeyBytes,
@@ -165,7 +132,7 @@ function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger.error("Failed to convert seed phrase to key pair:", error);
+        logger.error({ error }, "Failed to convert seed phrase to key pair");
         throw new Error("Failed to convert seed phrase to key pair");
     }
 }
@@ -184,12 +151,12 @@ function seedPhraseToPrivateKey(seedPhrase) {
             throw new Error("Invalid seed phrase");
         }
         const entropy = (0, bip39_js_1.getEntropyFromSeedPhrase)(seedPhrase);
-        const privateKey = (0, utils_1.bytesToHex)((0, sha256_1.sha256)(entropy));
+        const privateKey = (0, utils_js_1.bytesToHex)((0, sha2_js_1.sha256)(entropy));
         entropy.fill(0); // zero sensitive material
         return privateKey;
     }
     catch (error) {
-        logger.error("Failed to convert seed phrase to private key:", error);
+        logger.error({ error }, "Failed to convert seed phrase to private key");
         throw new Error("Failed to convert seed phrase to private key");
     }
 }

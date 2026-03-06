@@ -1,9 +1,8 @@
 import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from "bip39";
-import * as secp256k1 from "@noble/secp256k1";
-import { schnorr } from "@noble/curves/secp256k1";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { sha256 } from "@noble/hashes/sha256";
-import { hmac } from "@noble/hashes/hmac";
+import { secp256k1, schnorr } from "@noble/curves/secp256k1.js";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { hmac } from "@noble/hashes/hmac.js";
 import { bech32 } from "bech32";
 import { nip49 } from "nostr-crypto-utils";
 import { logger } from "./utils/logger";
@@ -70,7 +69,7 @@ export function seedPhraseToKeyPair(seedPhrase) {
         const privateKeyHex = bytesToHex(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         // Derive the public key
-        const publicKeyBytes = secp256k1.getPublicKey(privateKeyHex, true); // Force compressed format
+        const publicKeyBytes = secp256k1.getPublicKey(hexToBytes(privateKeyHex), true); // Force compressed format
         const publicKey = bytesToHex(publicKeyBytes);
         // Generate the nsec and npub formats
         const nsec = nip19.nsecEncode(privateKeyHex);
@@ -116,7 +115,7 @@ export function fromHex(privateKeyHex) {
     try {
         // Validate the private key
         const privateKeyBytes = hexToBytes(privateKeyHex);
-        if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+        if (!secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
             privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
@@ -282,7 +281,7 @@ export async function signEvent(event, privateKey) {
     try {
         const eventHash = getEventHash(event);
         const privateKeyBytes = hexToBytes(privateKey);
-        const signature = schnorr.sign(eventHash, privateKeyBytes);
+        const signature = schnorr.sign(hexToBytes(eventHash), privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         logger.log("Event signed successfully");
         return bytesToHex(signature);
@@ -312,7 +311,7 @@ export async function verifyEvent(event) {
             return false;
         }
         logger.log("Verifying event signature");
-        return schnorr.verify(hexToBytes(event.sig), hash, hexToBytes(event.pubkey));
+        return schnorr.verify(hexToBytes(event.sig), hexToBytes(hash), hexToBytes(event.pubkey));
     }
     catch (error) {
         logger.error("Failed to verify event:", error?.toString());
@@ -530,7 +529,7 @@ export async function signMessage(message, privateKey) {
         const messageHash = sha256(messageBytes);
         const messageHashHex = bytesToHex(messageHash);
         const privateKeyBytes = hexToBytes(privateKey);
-        const signature = schnorr.sign(messageHashHex, privateKeyBytes);
+        const signature = schnorr.sign(hexToBytes(messageHashHex), privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         logger.log("Message signed successfully");
         return bytesToHex(signature);
@@ -556,7 +555,7 @@ export async function verifySignature(message, signature, publicKey) {
         const messageHash = sha256(messageBytes);
         const messageHashHex = bytesToHex(messageHash);
         logger.log("Verifying message signature");
-        return schnorr.verify(hexToBytes(signature), messageHashHex, hexToBytes(publicKey));
+        return schnorr.verify(hexToBytes(signature), hexToBytes(messageHashHex), hexToBytes(publicKey));
     }
     catch (error) {
         logger.error("Failed to verify signature:", error?.toString());

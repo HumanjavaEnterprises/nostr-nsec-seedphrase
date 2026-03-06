@@ -8,9 +8,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createDelegation = createDelegation;
 exports.isValidDelegation = isValidDelegation;
 exports.getDelegationExpiry = getDelegationExpiry;
-const secp256k1_1 = require("@noble/curves/secp256k1");
-const sha256_1 = require("@noble/hashes/sha256");
-const utils_1 = require("@noble/hashes/utils");
+const secp256k1_js_1 = require("@noble/curves/secp256k1.js");
+const sha2_js_1 = require("@noble/hashes/sha2.js");
+const utils_js_1 = require("@noble/hashes/utils.js");
 const logger_js_1 = require("../utils/logger.js");
 /**
  * Creates a delegation token string
@@ -40,18 +40,18 @@ function createDelegationString(delegator, delegatee, conditions) {
 async function createDelegation(delegatee, conditions, delegatorPrivateKey) {
     try {
         // Get delegator's public key
-        const delegator = (0, utils_1.bytesToHex)(secp256k1_1.schnorr.getPublicKey(delegatorPrivateKey));
+        const delegator = (0, utils_js_1.bytesToHex)(secp256k1_js_1.schnorr.getPublicKey((0, utils_js_1.hexToBytes)(delegatorPrivateKey)));
         // Create delegation string
         const tokenString = createDelegationString(delegator, delegatee, conditions);
         // Sign the token
-        const messageHash = (0, sha256_1.sha256)(new TextEncoder().encode(tokenString));
-        const signature = await secp256k1_1.schnorr.sign(messageHash, delegatorPrivateKey);
+        const messageHash = (0, sha2_js_1.sha256)(new TextEncoder().encode(tokenString));
+        const signature = await secp256k1_js_1.schnorr.sign(messageHash, (0, utils_js_1.hexToBytes)(delegatorPrivateKey));
         logger_js_1.logger.log("Created delegation token");
         return {
             delegator,
             delegatee,
             conditions,
-            signature: (0, utils_1.bytesToHex)(signature),
+            signature: (0, utils_js_1.bytesToHex)(signature),
         };
     }
     catch (error) {
@@ -85,8 +85,8 @@ async function verifyDelegation(token, now) {
         }
         // Verify signature
         const tokenString = createDelegationString(tokenObject.delegator, tokenObject.delegatee, tokenObject.conditions);
-        const messageHash = (0, sha256_1.sha256)(new TextEncoder().encode(tokenString));
-        const isValid = await secp256k1_1.schnorr.verify(tokenObject.signature, messageHash, tokenObject.delegator);
+        const messageHash = (0, sha2_js_1.sha256)(new TextEncoder().encode(tokenString));
+        const isValid = await secp256k1_js_1.schnorr.verify((0, utils_js_1.hexToBytes)(tokenObject.signature), messageHash, (0, utils_js_1.hexToBytes)(tokenObject.delegator));
         return {
             isValid,
             error: isValid ? undefined : "Invalid delegation signature",

@@ -3,9 +3,9 @@
  * @description Key management functions for Nostr
  */
 import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from "bip39";
-import { secp256k1, schnorr } from "@noble/curves/secp256k1";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { sha256 } from "@noble/hashes/sha256";
+import { secp256k1, schnorr } from "@noble/curves/secp256k1.js";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { logger } from "../utils/logger.js";
 import { hexToNpub, hexToNsec } from "../nips/nip-19.js";
 /**
@@ -135,7 +135,7 @@ export async function generateKeyPairWithSeed() {
 export async function fromHex(privateKeyHex) {
     try {
         const privateKeyBytes = hexToBytes(privateKeyHex);
-        if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+        if (!secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
             privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
@@ -162,7 +162,7 @@ export async function fromHex(privateKeyHex) {
 export async function validateKeyPair(publicKey, privateKey) {
     try {
         const privateKeyBytes = hexToBytes(privateKey);
-        if (!secp256k1.utils.isValidPrivateKey(privateKeyBytes)) {
+        if (!secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
             privateKeyBytes.fill(0); // zero sensitive material
             return {
                 isValid: false,

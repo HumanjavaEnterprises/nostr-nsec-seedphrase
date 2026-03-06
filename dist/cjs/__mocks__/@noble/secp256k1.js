@@ -3,12 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.utils = exports.schnorr = void 0;
 exports.getPublicKey = getPublicKey;
 // Mock implementation of @noble/secp256k1 for testing
-const utils_1 = require("@noble/hashes/utils");
+const utils_js_1 = require("@noble/hashes/utils.js");
 function ensureUint8Array(input) {
     if (input instanceof Uint8Array)
         return input;
     if (typeof input === "string")
-        return (0, utils_1.hexToBytes)(input);
+        return (0, utils_js_1.hexToBytes)(input);
     throw new Error("Input must be Uint8Array or hex string");
 }
 function createMockPublicKey(privateKey) {
@@ -48,8 +48,8 @@ exports.schnorr = {
 };
 // Mock utility functions
 exports.utils = {
-    bytesToHex: utils_1.bytesToHex,
-    hexToBytes: utils_1.hexToBytes,
+    bytesToHex: utils_js_1.bytesToHex,
+    hexToBytes: utils_js_1.hexToBytes,
     isValidPrivateKey(key) {
         try {
             const keyBytes = ensureUint8Array(key);

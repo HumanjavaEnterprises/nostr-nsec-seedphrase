@@ -5,7 +5,7 @@
  * @see https://github.com/nostr-protocol/nips/blob/master/49.md
  */
 import { nip49 } from "nostr-crypto-utils";
-import { hexToBytes, bytesToHex } from "@noble/hashes/utils";
+import { hexToBytes, bytesToHex } from "@noble/hashes/utils.js";
 import { logger } from "../utils/logger.js";
 /**
  * Encrypts a hex private key into an ncryptsec bech32 string
