@@ -62,7 +62,7 @@
     "@noble/hashes": "^2.0.1",
     "bech32": "^2.0.0",
     "bip39": "^3.1.0",
-    "nostr-crypto-utils": "file:../nostr-crypto-utils",
+    "nostr-crypto-utils": "^0.6.0",
     "pino": "^10.3.1"
   },
   "devDependencies": {
