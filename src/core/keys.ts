@@ -30,7 +30,9 @@ const logger = pino({
  */
 export function getPublicKey(privateKey: string): string {
   try {
-    const pubkey = bytesToHex(secp256k1.getPublicKey(hexToBytes(privateKey), true));
+    const pubkey = bytesToHex(
+      secp256k1.getPublicKey(hexToBytes(privateKey), true),
+    );
     return pubkey;
   } catch (error) {
     logger.error({ error }, "Failed to derive public key");

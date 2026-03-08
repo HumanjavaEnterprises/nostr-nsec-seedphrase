@@ -1,6 +1,6 @@
 {
   "name": "nostr-nsec-seedphrase",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "A comprehensive TypeScript library for Nostr key management with BIP39 seed phrases, supporting both ESM and CommonJS. Implements NIP-01, NIP-06, NIP-19, and NIP-26 with key generation, event signing, bech32 encoding/decoding, and secure cryptographic operations.",
   "type": "module",
   "main": "./dist/index.js",
@@ -62,17 +62,17 @@
     "@noble/hashes": "^2.0.1",
     "bech32": "^2.0.0",
     "bip39": "^3.1.0",
-    "nostr-crypto-utils": "^0.6.0",
+    "nostr-crypto-utils": "^0.7.0",
     "pino": "^10.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^20.19.33",
+    "@types/node": "^22.19.15",
     "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.56.0",
     "@vitest/coverage-v8": "^4.0.18",
     "esbuild": "^0.27.3",
-    "eslint": "^10.0.0",
+    "eslint": "^10.0.3",
     "prettier": "^3.8.1",
     "typedoc": "^0.28.17",
     "typedoc-plugin-markdown": "^4.10.0",

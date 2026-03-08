@@ -69,7 +69,9 @@ export async function createDelegation(
 ): Promise<DelegationToken> {
   try {
     // Get delegator's public key
-    const delegator = bytesToHex(schnorr.getPublicKey(hexToBytes(delegatorPrivateKey)));
+    const delegator = bytesToHex(
+      schnorr.getPublicKey(hexToBytes(delegatorPrivateKey)),
+    );
 
     // Create delegation string
     const tokenString = createDelegationString(
@@ -80,7 +82,10 @@ export async function createDelegation(
 
     // Sign the token
     const messageHash = sha256(new TextEncoder().encode(tokenString));
-    const signature = await schnorr.sign(messageHash, hexToBytes(delegatorPrivateKey));
+    const signature = await schnorr.sign(
+      messageHash,
+      hexToBytes(delegatorPrivateKey),
+    );
 
     logger.log("Created delegation token");
     return {

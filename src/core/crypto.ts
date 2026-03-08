@@ -170,7 +170,10 @@ export async function signEvent(
 ): Promise<string> {
   try {
     const eventHash = getEventHash(event);
-    const sig = await schnorr.sign(hexToBytes(eventHash), hexToBytes(privateKey));
+    const sig = await schnorr.sign(
+      hexToBytes(eventHash),
+      hexToBytes(privateKey),
+    );
     return bytesToHex(sig);
   } catch (error) {
     logger.error("Failed to sign event:", error?.toString());

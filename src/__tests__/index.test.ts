@@ -35,8 +35,11 @@ vi.mock("@noble/curves/secp256k1.js", () => {
     secp256k1: {
       getPublicKey: (_privKey: Uint8Array, _compressed?: boolean) => {
         // Return a deterministic 33-byte compressed public key (02 prefix + 32-byte x)
-        const hex = "0202030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021";
-        return new Uint8Array(hex.match(/.{1,2}/g)!.map((b: string) => parseInt(b, 16)));
+        const hex =
+          "0202030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021";
+        return new Uint8Array(
+          hex.match(/.{1,2}/g)!.map((b: string) => parseInt(b, 16)),
+        );
       },
       getSharedSecret: () => new Uint8Array(33).fill(3),
       utils: {

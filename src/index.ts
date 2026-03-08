@@ -130,7 +130,10 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
     privateKeyBytes.fill(0); // zero sensitive material
 
     // Derive the public key
-    const publicKeyBytes = secp256k1.getPublicKey(hexToBytes(privateKeyHex), true); // Force compressed format
+    const publicKeyBytes = secp256k1.getPublicKey(
+      hexToBytes(privateKeyHex),
+      true,
+    ); // Force compressed format
     const publicKey = bytesToHex(publicKeyBytes);
 
     // Generate the nsec and npub formats
