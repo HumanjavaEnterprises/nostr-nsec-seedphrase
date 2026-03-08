@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-06
+
+### Changed
+- **Noble 2.0 migration:** `@noble/curves` ^2.0.1, `@noble/hashes` ^2.0.1
+- **Vitest 4:** Upgraded test framework
+- **esbuild:** Replaced webpack with esbuild for browser bundling
+- **nostr-crypto-utils** dependency upgraded to ^0.6.0
+- Dropped Node.js 16 support, CI runs on Node 20.x + 22.x
+
+### Added
+- NIP-49 ncryptsec support via nostr-crypto-utils v0.5.1
+
+### Fixed
+- Resolved npm audit vulnerabilities (ajv, minimatch, rollup)
+- Updated test mocks for `@noble/curves/secp256k1` schnorr functions
+- `configureHMAC` safety guard and proper ECDH shared secret
+- Memory zeroing, Schnorr signatures, and 32-byte key derivation
+- Removed private key material from all log outputs
+
+### Security
+- Eliminated elliptic HIGH vulnerability by updating nostr-crypto-utils
+- Removed crypto-browserify devDep
+
 ## [0.6.6] - 2025-02-19
 
 ### Changed

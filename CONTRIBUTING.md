@@ -51,7 +51,7 @@ When you are creating an enhancement suggestion, please include as many details 
 
 ## Testing
 
-We use Jest for testing. Please ensure all tests pass before submitting a pull request:
+We use Vitest for testing. Please ensure all tests pass before submitting a pull request:
 
 ```bash
 npm test
