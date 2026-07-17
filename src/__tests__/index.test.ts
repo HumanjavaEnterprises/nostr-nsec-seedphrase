@@ -9,6 +9,9 @@ import {
   generateKeyPairWithSeed,
   seedPhraseToKeyPair,
   seedPhraseToPrivateKey,
+  seedPhraseToKeyPairLegacy,
+  seedPhraseToPrivateKeyLegacy,
+  NIP06_DERIVATION_PATH,
   validateSeedPhrase,
   getPublicKey,
   getCompressedPublicKey,
@@ -85,13 +88,41 @@ describe("nostr-nsec-seedphrase", () => {
       expect(privateKeyToNpub(alice.privateKey)).toBe(alice.npub);
     });
 
-    it("seedPhraseToKeyPair derives an x-only pubkey (library sha256-entropy KAT)", () => {
-      const kp = seedPhraseToKeyPair(libSeed.mnemonic);
+  });
+
+  describe("Known-answer: NIP-06 seed phrase derivation (official spec vectors)", () => {
+    it("uses the NIP-06 path m/44'/1237'/0'/0/0", () => {
+      expect(NIP06_DERIVATION_PATH).toBe("m/44'/1237'/0'/0/0");
+    });
+
+    for (const [i, v] of vectors.nip06_seedphrase.entries()) {
+      it(`seedPhraseToKeyPair reproduces NIP-06 spec vector ${i + 1}`, () => {
+        const kp = seedPhraseToKeyPair(v.mnemonic);
+        expect(kp.privateKey).toBe(v.privateKey);
+        expect(kp.nsec).toBe(v.nsec);
+        expect(kp.publicKey).toBe(v.xonlyPubkey);
+        expect(kp.publicKey).toMatch(/^[0-9a-f]{64}$/);
+        expect(kp.npub).toBe(v.npub);
+        expect(seedPhraseToPrivateKey(v.mnemonic)).toBe(v.privateKey);
+      });
+    }
+
+    it("legacy sha256(entropy) recovery path still reproduces pre-0.8.0 keys", () => {
+      // Locked known-answer for the OLD derivation so identities created
+      // before the NIP-06 fix remain recoverable.
+      expect(seedPhraseToPrivateKeyLegacy(libSeed.mnemonic)).toBe(
+        libSeed.privateKey,
+      );
+      const kp = seedPhraseToKeyPairLegacy(libSeed.mnemonic);
       expect(kp.privateKey).toBe(libSeed.privateKey);
       expect(kp.publicKey).toBe(libSeed.xonlyPubkey);
-      expect(kp.publicKey).toMatch(/^[0-9a-f]{64}$/);
       expect(kp.npub).toBe(libSeed.npub);
-      expect(seedPhraseToPrivateKey(libSeed.mnemonic)).toBe(libSeed.privateKey);
+    });
+
+    it("new derivation differs from the legacy one (regression guard)", () => {
+      expect(seedPhraseToPrivateKey(libSeed.mnemonic)).not.toBe(
+        seedPhraseToPrivateKeyLegacy(libSeed.mnemonic),
+      );
     });
   });
 

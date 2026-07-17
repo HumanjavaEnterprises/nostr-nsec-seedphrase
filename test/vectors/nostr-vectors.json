@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Shared, language-neutral Nostr known-answer test vectors. This file is the canonical spine for the Nostr key/crypto family (nostr-nsec-seedphrase, nostr-crypto-utils, browser plugin, ...). All public keys are 32-byte x-only per BIP-340. Copy this file verbatim into sibling projects; do not embed language- or library-specific assertions here.",
   "references": {
     "bip340": "https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki",
@@ -25,17 +25,32 @@
       "nsec": "nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqptcfk2"
     }
   },
-  "nip06_seedphrase": {
-    "description": "Canonical NIP-06 vector (standard BIP32 derivation m/44'/1237'/account'/0/0 from the BIP39 seed). This is the interoperable standard used across the Nostr ecosystem.",
-    "derivation": "nip06-bip32",
-    "path": "m/44'/1237'/0'/0/0",
-    "mnemonic": "leader monkey parrot ring guide accident before fringe cannon center peace inside",
-    "account": 0,
-    "privateKey": "7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a",
-    "compat_note": "nostr-nsec-seedphrase v0.8.0 does NOT implement standard NIP-06 derivation; it derives the private key as sha256(bip39-entropy). It therefore does not reproduce this vector. See library_seedphrase for a vector this library's seedPhraseToKeyPair actually produces."
-  },
+  "nip06_seedphrase": [
+    {
+      "description": "Official NIP-06 spec test vector 1 (standard BIP32 derivation m/44'/1237'/account'/0/0 from the BIP39 seed). Interoperable across the Nostr ecosystem (Alby, nos2x, nak, nostrkey Python, ...). seedPhraseToKeyPair MUST reproduce this.",
+      "derivation": "nip06-bip32",
+      "path": "m/44'/1237'/0'/0/0",
+      "mnemonic": "leader monkey parrot ring guide accident before fence cannon height naive bean",
+      "account": 0,
+      "privateKey": "7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a",
+      "nsec": "nsec10allq0gjx7fddtzef0ax00mdps9t2kmtrldkyjfs8l5xruwvh2dq0lhhkp",
+      "xonlyPubkey": "17162c921dc4d2518f9a101db33695df1afb56ab82f5ff3e5da6eec3ca5cd917",
+      "npub": "npub1zutzeysacnf9rru6zqwmxd54mud0k44tst6l70ja5mhv8jjumytsd2x7nu"
+    },
+    {
+      "description": "Official NIP-06 spec test vector 2 (24-word mnemonic, account 0).",
+      "derivation": "nip06-bip32",
+      "path": "m/44'/1237'/0'/0/0",
+      "mnemonic": "what bleak badge arrange retreat wolf trade produce cricket blur garlic valid proud rude strong choose busy staff weather area salt hollow arm fade",
+      "account": 0,
+      "privateKey": "c15d739894c81a2fcfd3a2df85a0d2c0dbc47a280d092799f144d73d7ae78add",
+      "nsec": "nsec1c9wh8xy5eqdzln7n5t0ctgxjcrdug73gp5yj0x03gntn67h83twssdfhel",
+      "xonlyPubkey": "d41b22899549e1f3d335a31002cfd382174006e166d3e658e3a5eecdb6463573",
+      "npub": "npub16sdj9zv4f8sl85e45vgq9n7nsgt5qphpvmf7vk8r5hhvmdjxx4es8rq74h"
+    }
+  ],
   "library_seedphrase": {
-    "description": "nostr-nsec-seedphrase-specific derivation: privateKey = sha256(bip39-entropy). Provided so the seed-phrase path has a real known-answer for THIS library. NOT interoperable with standard NIP-06.",
+    "description": "LEGACY nostr-nsec-seedphrase derivation (pre-0.8.0): privateKey = sha256(bip39-entropy). NOT NIP-06, NOT interoperable. Kept as the known-answer for the recovery path (seedPhraseToPrivateKeyLegacy / seedPhraseToKeyPairLegacy) so identities created before the NIP-06 fix remain recoverable.",
     "derivation": "sha256-of-bip39-entropy",
     "mnemonic": "test test test test test test test test test test test junk",
     "bip39Entropy": "df9bf37e6fcdf9bf37e6fcdf9bf37e3c",

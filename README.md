@@ -17,7 +17,9 @@ A focused TypeScript library for Nostr key management and seedphrase functionali
 
 - 🌱 **Seedphrase Management**
   - Generate and validate BIP39 seed phrases
-  - Convert between seed phrases and Nostr keys
+  - Convert between seed phrases and Nostr keys — **standard NIP-06
+    derivation (BIP-32 path `m/44'/1237'/0'/0/0`)**, interoperable with
+    Alby, nos2x, nak, and other NIP-06 tooling
   - Secure entropy generation
   - Multiple language support
 
@@ -91,6 +93,19 @@ console.log({
 > return the 64-hex-char x-only key. If you specifically need the 33-byte SEC1
 > compressed key (for ECDH / non-Nostr interop), use `getCompressedPublicKey`.
 > This changed in v0.8.0 (previously 33-byte compressed) — see CHANGELOG.
+
+> **Seed-phrase derivation is NIP-06 compliant as of v0.8.0.** The private key
+> is derived via the BIP-32 path `m/44'/1237'/0'/0/0` from the BIP39 seed, so
+> the same mnemonic yields the same key in Alby, nos2x, nak, and any other
+> NIP-06 tool (verified against the official NIP-06 spec test vectors).
+> Versions before 0.8.0 used a non-standard `sha256(entropy)` derivation; if
+> you created an identity with an older version, recover it with
+> `seedPhraseToPrivateKeyLegacy` / `seedPhraseToKeyPairLegacy`:
+>
+> ```typescript
+> import { seedPhraseToKeyPairLegacy } from 'nostr-nsec-seedphrase';
+> const oldIdentity = seedPhraseToKeyPairLegacy('your pre-0.8.0 seed phrase');
+> ```
 
 ### Create and Verify Delegations
 

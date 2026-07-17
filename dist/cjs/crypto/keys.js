@@ -4,17 +4,21 @@
  * @description Key management functions for Nostr
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.NIP06_DERIVATION_PATH = void 0;
 exports.createPublicKey = createPublicKey;
 exports.generateSeedPhrase = generateSeedPhrase;
 exports.getEntropyFromSeedPhrase = getEntropyFromSeedPhrase;
 exports.validateSeedPhrase = validateSeedPhrase;
+exports.deriveNip06PrivateKey = deriveNip06PrivateKey;
 exports.seedPhraseToKeyPair = seedPhraseToKeyPair;
+exports.seedPhraseToKeyPairLegacy = seedPhraseToKeyPairLegacy;
 exports.derivePrivateKey = derivePrivateKey;
 exports.generateKeyPairWithSeed = generateKeyPairWithSeed;
 exports.fromHex = fromHex;
 exports.validateKeyPair = validateKeyPair;
 exports.validatePublicKey = validatePublicKey;
 const bip39_1 = require("bip39");
+const bip32_1 = require("@scure/bip32");
 const secp256k1_js_1 = require("@noble/curves/secp256k1.js");
 const utils_js_1 = require("@noble/hashes/utils.js");
 const sha2_js_1 = require("@noble/hashes/sha2.js");
@@ -101,12 +105,77 @@ function validateSeedPhrase(seedPhrase) {
     return Boolean(isValid);
 }
 /**
- * Converts a BIP39 seed phrase to a Nostr key pair
+ * NIP-06 derivation path: `m/44'/1237'/0'/0/0`.
+ * @see https://github.com/nostr-protocol/nips/blob/master/06.md
+ */
+exports.NIP06_DERIVATION_PATH = "m/44'/1237'/0'/0/0";
+/**
+ * Derives a Nostr private key from a BIP39 seed phrase per NIP-06:
+ * BIP39 seed -> BIP32 master key -> derive `m/44'/1237'/0'/0/0`.
+ * @param seedPhrase - A valid BIP39 mnemonic
+ * @returns The hex-encoded 32-byte private key
+ * @throws {Error} If the seed phrase is invalid or derivation fails
+ */
+function deriveNip06PrivateKey(seedPhrase) {
+    if (!(0, bip39_1.validateMnemonic)(seedPhrase)) {
+        throw new Error("Invalid seed phrase");
+    }
+    const seed = (0, bip39_1.mnemonicToSeedSync)(seedPhrase); // 64-byte BIP39 seed
+    const child = bip32_1.HDKey.fromMasterSeed(seed).derive(exports.NIP06_DERIVATION_PATH);
+    seed.fill(0); // zero sensitive material
+    if (!child.privateKey || child.privateKey.length !== 32) {
+        throw new Error("Failed to derive NIP-06 private key");
+    }
+    const privateKeyHex = (0, utils_js_1.bytesToHex)(child.privateKey);
+    child.wipePrivateData();
+    return privateKeyHex;
+}
+/**
+ * Converts a BIP39 seed phrase to a Nostr key pair using the standard
+ * NIP-06 derivation (BIP32 path `m/44'/1237'/0'/0/0`).
+ *
+ * NOTE (v0.8.0 BREAKING): prior versions derived the private key as
+ * `sha256(bip39-entropy)`, which is NOT NIP-06. Identities created with
+ * earlier versions can be recovered with {@link seedPhraseToKeyPairLegacy}.
+ *
  * @param seedPhrase - The BIP39 seed phrase to convert
  * @returns A key pair containing private and public keys in various formats
  * @throws {Error} If the seed phrase is invalid or key generation fails
  */
 async function seedPhraseToKeyPair(seedPhrase) {
+    try {
+        if (!validateSeedPhrase(seedPhrase)) {
+            throw new Error("Invalid seed phrase");
+        }
+        const privateKey = deriveNip06PrivateKey(seedPhrase);
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        const publicKey = createPublicKey((0, utils_js_1.bytesToHex)(getSchnorrPublicKey(privateKeyBytes)));
+        privateKeyBytes.fill(0); // zero sensitive material
+        return {
+            privateKey,
+            publicKey,
+            nsec: (0, nip_19_js_1.hexToNsec)(privateKey),
+            seedPhrase,
+        };
+    }
+    catch (error) {
+        logger_js_1.logger.error("Failed to convert seed phrase to key pair:", error?.toString());
+        throw error;
+    }
+}
+/**
+ * LEGACY (pre-0.8.0) variant of {@link seedPhraseToKeyPair}: derives the
+ * private key as `sha256(bip39-entropy)` instead of the NIP-06 BIP32 path.
+ *
+ * This is NOT NIP-06 and is NOT interoperable with other Nostr tooling. It
+ * exists solely to recover identities created with nostr-nsec-seedphrase
+ * before the NIP-06 fix in v0.8.0.
+ *
+ * @param seedPhrase - The BIP39 seed phrase to convert
+ * @returns The legacy key pair
+ * @throws {Error} If the seed phrase is invalid
+ */
+async function seedPhraseToKeyPairLegacy(seedPhrase) {
     try {
         if (!validateSeedPhrase(seedPhrase)) {
             throw new Error("Invalid seed phrase");
@@ -125,12 +194,16 @@ async function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger_js_1.logger.error("Failed to convert seed phrase to key pair:", error?.toString());
+        logger_js_1.logger.error("Failed to convert seed phrase to legacy key pair:", error?.toString());
         throw error;
     }
 }
 /**
- * Derives a private key from entropy
+ * Derives a private key from entropy (legacy pre-0.8.0 scheme:
+ * `sha256(entropy)`).
+ * @deprecated Not NIP-06. Kept only for recovering pre-0.8.0 identities —
+ *   see {@link seedPhraseToKeyPairLegacy}. Use {@link deriveNip06PrivateKey}
+ *   for standard derivation.
  * @param {Uint8Array} entropy - The entropy to derive from
  * @returns {string} The hex-encoded private key
  */

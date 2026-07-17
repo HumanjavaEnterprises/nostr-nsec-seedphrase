@@ -79,7 +79,21 @@ export declare function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array
  */
 export declare function validateSeedPhrase(seedPhrase: string): boolean;
 /**
- * Converts a BIP39 seed phrase to a Nostr key pair
+ * NIP-06 derivation path: BIP-44 purpose, SLIP-44 coin type 1237 (Nostr),
+ * account 0. `m/44'/1237'/0'/0/0`.
+ * @see https://github.com/nostr-protocol/nips/blob/master/06.md
+ */
+export declare const NIP06_DERIVATION_PATH = "m/44'/1237'/0'/0/0";
+/**
+ * Converts a BIP39 seed phrase to a Nostr key pair using the standard
+ * NIP-06 derivation (BIP32 path `m/44'/1237'/0'/0/0`).
+ *
+ * NOTE (v0.8.0 BREAKING): prior versions derived the private key as
+ * `sha256(bip39-entropy)`, which is NOT NIP-06 and does not interoperate
+ * with other Nostr tooling. Identities created with earlier versions can be
+ * recovered with {@link seedPhraseToKeyPairLegacy} /
+ * {@link seedPhraseToPrivateKeyLegacy}.
+ *
  * @param {string} seedPhrase - The BIP39 seed phrase to convert
  * @returns {KeyPair} A key pair containing private and public keys in various formats
  * @throws {Error} If the seed phrase is invalid or key generation fails
@@ -91,6 +105,31 @@ export declare function validateSeedPhrase(seedPhrase: string): boolean;
  * console.log(keyPair.npub);       // bech32 npub public key
  */
 export declare function seedPhraseToKeyPair(seedPhrase: string): KeyPair;
+/**
+ * LEGACY (pre-0.8.0) derivation: converts a BIP39 seed phrase to a private
+ * key as `sha256(bip39-entropy)`.
+ *
+ * This is NOT NIP-06 and is NOT interoperable with other Nostr tooling. It
+ * exists solely to recover identities created with nostr-nsec-seedphrase
+ * before the NIP-06 fix in v0.8.0. For all new identities use
+ * {@link seedPhraseToPrivateKey}.
+ *
+ * @param {string} seedPhrase - The BIP39 seed phrase to convert
+ * @returns {string} The hex-encoded private key (legacy sha256-of-entropy)
+ * @throws {Error} If the seed phrase is invalid
+ */
+export declare function seedPhraseToPrivateKeyLegacy(seedPhrase: string): string;
+/**
+ * LEGACY (pre-0.8.0) variant of {@link seedPhraseToKeyPair}: full key pair
+ * from the old `sha256(bip39-entropy)` derivation, including nsec/npub.
+ *
+ * Use only to recover identities created before the NIP-06 fix in v0.8.0.
+ *
+ * @param {string} seedPhrase - The BIP39 seed phrase to convert
+ * @returns {KeyPair} The legacy key pair
+ * @throws {Error} If the seed phrase is invalid
+ */
+export declare function seedPhraseToKeyPairLegacy(seedPhrase: string): KeyPair;
 /**
  * Generates a new key pair with a random seed phrase
  * @returns {KeyPair} A new key pair containing private and public keys in various formats
@@ -239,7 +278,10 @@ export declare function configureHMAC(): void;
  */
 export declare function createEvent(content: string, kind: number, privateKey: string, tags?: string[][]): Promise<NostrEvent>;
 /**
- * Converts a BIP39 seed phrase to a private key
+ * Converts a BIP39 seed phrase to a private key using the standard NIP-06
+ * derivation (BIP32 path `m/44'/1237'/0'/0/0`). Interoperable with Alby,
+ * nos2x, nak, and other NIP-06 tooling. For identities created before
+ * v0.8.0 see {@link seedPhraseToPrivateKeyLegacy}.
  * @param {string} seedPhrase - The BIP39 seed phrase to convert
  * @returns {string} The hex-encoded private key
  * @throws {Error} If the seed phrase is invalid
