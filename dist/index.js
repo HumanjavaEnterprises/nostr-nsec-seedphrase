@@ -5,7 +5,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { hmac } from "@noble/hashes/hmac.js";
 import { bech32 } from "bech32";
 import { nip49 } from "nostr-crypto-utils";
-import { logger } from "./utils/logger";
+import { logger } from "./utils/logger.js";
 /**
  * Generates a new BIP39 seed phrase
  * @returns {string} A random 12-word BIP39 mnemonic seed phrase
@@ -68,8 +68,8 @@ export function seedPhraseToKeyPair(seedPhrase) {
         entropy.fill(0); // zero sensitive material
         const privateKeyHex = bytesToHex(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
-        // Derive the public key
-        const publicKeyBytes = secp256k1.getPublicKey(hexToBytes(privateKeyHex), true); // Force compressed format
+        // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
+        const publicKeyBytes = schnorr.getPublicKey(hexToBytes(privateKeyHex));
         const publicKey = bytesToHex(publicKeyBytes);
         // Generate the nsec and npub formats
         const nsec = nip19.nsecEncode(privateKeyHex);
@@ -119,8 +119,8 @@ export function fromHex(privateKeyHex) {
             privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
-        // Derive the public key
-        const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
+        const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         const publicKey = bytesToHex(publicKeyBytes);
         // Generate the nsec and npub formats
@@ -150,12 +150,37 @@ export function fromHex(privateKeyHex) {
 export function getPublicKey(privateKey) {
     try {
         const privateKeyBytes = hexToBytes(privateKey);
-        const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        // 32-byte x-only public key (BIP-340 / Nostr identity)
+        const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         return bytesToHex(publicKeyBytes);
     }
     catch (error) {
         logger.error("Failed to get public key:", error?.toString());
+        throw error;
+    }
+}
+/**
+ * Derives the 33-byte SEC1 compressed public key from a private key.
+ *
+ * This is NOT a valid Nostr/BIP-340 identity key. Nostr uses 32-byte x-only
+ * public keys (see {@link getPublicKey}). Only use this if you specifically
+ * need the compressed SEC1 encoding for ECDH or interop with non-Nostr tooling.
+ *
+ * @deprecated For Nostr identity use {@link getPublicKey} (x-only). Do not
+ *   encode the output of this function as an npub.
+ * @param {string} privateKey - The hex-encoded private key
+ * @returns {string} The 66-hex-char (33-byte) compressed public key
+ */
+export function getCompressedPublicKey(privateKey) {
+    try {
+        const privateKeyBytes = hexToBytes(privateKey);
+        const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true);
+        privateKeyBytes.fill(0); // zero sensitive material
+        return bytesToHex(publicKeyBytes);
+    }
+    catch (error) {
+        logger.error("Failed to get compressed public key:", error?.toString());
         throw error;
     }
 }
@@ -171,6 +196,11 @@ export const nip19 = {
      */
     npubEncode(pubkey) {
         const data = hexToBytes(pubkey);
+        // Nostr npubs are 32-byte x-only public keys (BIP-340). Reject anything
+        // else (e.g. a 33-byte compressed key) so it can never be silently encoded.
+        if (data.length !== 32) {
+            throw new Error(`Invalid public key: npub requires a 32-byte x-only key, got ${data.length} bytes`);
+        }
         const words = bech32.toWords(Uint8Array.from(data));
         return bech32.encode("npub", words, 1000);
     },
@@ -423,7 +453,8 @@ export function privateKeyToNsec(privateKey) {
 export function privateKeyToNpub(privateKey) {
     try {
         const privateKeyBytes = hexToBytes(privateKey);
-        const publicKey = secp256k1.getPublicKey(privateKeyBytes, true);
+        // 32-byte x-only public key (BIP-340 / Nostr identity)
+        const publicKey = schnorr.getPublicKey(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         return nip19.npubEncode(bytesToHex(publicKey));
     }

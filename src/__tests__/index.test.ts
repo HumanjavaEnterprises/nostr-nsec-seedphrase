@@ -1,102 +1,18 @@
-// WARNING: These keys are for testing purposes only!
-// Never use these keys in production or for real Nostr events.
-// They are intentionally hardcoded to ensure deterministic testing.
+// These tests run against REAL crypto (no mocks). Public keys are 32-byte
+// x-only per BIP-340. Known-answer vectors are loaded from the shared,
+// language-neutral vector file at test/vectors/nostr-vectors.json.
 
-// Mock dependencies
-vi.mock("@noble/curves/secp256k1.js", () => {
-  let lastSignedHash = "";
-
-  return {
-    schnorr: {
-      sign: (msgHash: string | Uint8Array, _privKey: Uint8Array) => {
-        lastSignedHash =
-          typeof msgHash === "string"
-            ? msgHash
-            : Array.from(msgHash)
-                .map((b) => b.toString(16).padStart(2, "0"))
-                .join("");
-        return new Uint8Array(64).fill(1);
-      },
-      verify: (
-        _sig: Uint8Array,
-        msgHash: string | Uint8Array,
-        _pubKey: Uint8Array,
-      ) => {
-        const currentHash =
-          typeof msgHash === "string"
-            ? msgHash
-            : Array.from(msgHash)
-                .map((b) => b.toString(16).padStart(2, "0"))
-                .join("");
-        return currentHash === lastSignedHash;
-      },
-      getPublicKey: () => new Uint8Array(32).fill(2),
-    },
-    secp256k1: {
-      getPublicKey: (_privKey: Uint8Array, _compressed?: boolean) => {
-        // Return a deterministic 33-byte compressed public key (02 prefix + 32-byte x)
-        const hex =
-          "0202030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021";
-        return new Uint8Array(
-          hex.match(/.{1,2}/g)!.map((b: string) => parseInt(b, 16)),
-        );
-      },
-      getSharedSecret: () => new Uint8Array(33).fill(3),
-      utils: {
-        isValidSecretKey: () => true,
-      },
-    },
-  };
-});
-
-vi.mock("bech32", () => ({
-  bech32: {
-    encode: (prefix: string, words: number[]) =>
-      prefix === "npub" ? "npub1test" : "nsec1test",
-    decode: (str: string) => {
-      const TEST_PRIVATE_KEY =
-        "27e2a04464f4e73b9131548b6dffbe47ae49ec7a7562c5a157e6a30f9f1ceb69";
-      const TEST_PUBLIC_KEY =
-        "02030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021";
-      if (str.startsWith("npub")) {
-        return {
-          prefix: "npub",
-          words: Array.from(hexToBytes(TEST_PUBLIC_KEY)),
-        };
-      } else {
-        return {
-          prefix: "nsec",
-          words: Array.from(hexToBytes(TEST_PRIVATE_KEY)),
-        };
-      }
-    },
-    toWords: (data: Uint8Array) => Array.from(data),
-    fromWords: (words: number[]) => new Uint8Array(words),
-  },
-}));
-
-// Create a test Uint8Array for our mock
-const testEntropy = new Uint8Array([
-  39, 226, 160, 68, 100, 244, 231, 59, 145, 49, 84, 139, 109, 255, 190, 71, 174,
-  73, 236, 122, 117, 98, 197, 161, 87, 230, 163, 15, 159, 28, 235, 105,
-]);
-
-vi.mock("bip39", () => {
-  return {
-    validateMnemonic: (phrase: string) =>
-      phrase === "test test test test test test test test test test test junk",
-    generateMnemonic: () =>
-      "test test test test test test test test test test test junk",
-    mnemonicToEntropy: () =>
-      "27e2a04464f4e73b9131548b6dffbe47ae49ec7a7562c5a157e6a30f9f1ceb69",
-  };
-});
-
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { describe, it, expect, beforeAll } from "vitest";
 import {
   generateKeyPairWithSeed,
   seedPhraseToKeyPair,
+  seedPhraseToPrivateKey,
   validateSeedPhrase,
+  getPublicKey,
+  getCompressedPublicKey,
+  privateKeyToNpub,
   nsecToHex,
   npubToHex,
   hexToNsec,
@@ -107,231 +23,173 @@ import {
   verifyEvent,
   configureHMAC,
   fromHex,
+  nip19,
 } from "../index.js";
 
+const vectors = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL("../../test/vectors/nostr-vectors.json", import.meta.url),
+    ),
+    "utf-8",
+  ),
+);
+
+const alice = vectors.keypairs.alice;
+const bob = vectors.keypairs.bob;
+const libSeed = vectors.library_seedphrase;
+
 /**
- * Tests for the nostr-nsec-seedphrase library.
+ * Tests for the nostr-nsec-seedphrase library (real crypto, no mocks).
  *
- * This suite covers:
- * - BIP39 seed phrase validation
- * - Key format conversions (hex ↔ nsec/npub)
- * - Message signing and verification
- * - Event creation and verification
- * - HMAC configuration
- * - Random key generation
- *
- * @version 0.5.0
+ * @version 0.8.0
  */
 describe("nostr-nsec-seedphrase", () => {
   beforeAll(() => {
-    // Configure HMAC before running tests
     configureHMAC();
   });
 
-  beforeEach(() => {
-    // Clear all mocks before each test
-    vi.clearAllMocks();
-  });
-
-  describe("Mocking Verification", () => {
-    it("should properly mock bip39", () => {
-      const result = validateSeedPhrase(
-        "test test test test test test test test test test test junk",
-      );
-      console.log("Direct mock call result:", result);
-      expect(result).toBe(true);
+  describe("Seed phrase validation", () => {
+    it("validates a real BIP39 mnemonic", () => {
+      expect(validateSeedPhrase(libSeed.mnemonic)).toBe(true);
+      expect(validateSeedPhrase("invalid seed phrase")).toBe(false);
     });
   });
 
-  describe("Key Generation", () => {
-    it("should validate seed phrases", () => {
-      const validResult = validateSeedPhrase(
-        "test test test test test test test test test test test junk",
-      );
-      console.log("Valid seed phrase test result:", validResult);
-      expect(validResult).toBe(true);
-
-      const invalidResult = validateSeedPhrase("invalid seed phrase");
-      console.log("Invalid seed phrase test result:", invalidResult);
-      expect(invalidResult).toBe(false);
+  describe("Known-answer: x-only public keys (BIP-340)", () => {
+    it("getPublicKey returns the 32-byte x-only key for alice (priv=..01)", () => {
+      const pub = getPublicKey(alice.privateKey);
+      expect(pub).toBe(alice.xonlyPubkey);
+      expect(pub).toMatch(/^[0-9a-f]{64}$/); // 32 bytes, NOT 66/33-byte compressed
     });
 
-    it("should generate a valid key pair with seed phrase", () => {
-      const keyPair = seedPhraseToKeyPair(
-        "test test test test test test test test test test test junk",
-      );
-      expect(keyPair.privateKey).toBeDefined();
-      expect(keyPair.publicKey).toBeDefined();
-      expect(keyPair.nsec).toMatch(/^nsec1/);
-      expect(keyPair.npub).toMatch(/^npub1/);
-      expect(keyPair.seedPhrase).toBe(
-        "test test test test test test test test test test test junk",
-      );
+    it("getPublicKey returns the x-only key for bob (priv=..02)", () => {
+      expect(getPublicKey(bob.privateKey)).toBe(bob.xonlyPubkey);
     });
 
-    it("should convert seed phrase to key pair", () => {
-      const keyPair = seedPhraseToKeyPair(
-        "test test test test test test test test test test test junk",
-      );
-      expect(keyPair.privateKey).toBeDefined();
-      expect(keyPair.publicKey).toBeDefined();
-      expect(keyPair.nsec).toBeDefined();
-      expect(keyPair.npub).toBeDefined();
-    });
-  });
-
-  describe("Format Conversions", () => {
-    it("should convert between hex and nsec/npub formats", () => {
-      const keyPair = {
-        privateKey:
-          "27e2a04464f4e73b9131548b6dffbe47ae49ec7a7562c5a157e6a30f9f1ceb69",
-        publicKey:
-          "02030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021",
-        nsec: "nsec1test",
-        npub: "npub1test",
-        seedPhrase: "",
-      };
-
-      // Test hex to nsec/npub
-      const nsec = hexToNsec(keyPair.privateKey);
-      const npub = hexToNpub(keyPair.publicKey);
-      console.log("Converted nsec:", nsec);
-      console.log("Converted npub:", npub);
-      expect(nsec).toBe(keyPair.nsec);
-      expect(npub).toBe(keyPair.npub);
-
-      // Test nsec/npub to hex
-      const privateKeyHex = nsecToHex(keyPair.nsec);
-      const publicKeyHex = npubToHex(keyPair.npub);
-      console.log("Converted private key hex:", privateKeyHex);
-      console.log("Converted public key hex:", publicKeyHex);
-      expect(privateKeyHex).toBe(keyPair.privateKey);
-      expect(publicKeyHex).toBe(keyPair.publicKey);
+    it("getCompressedPublicKey still exposes the 33-byte compressed key", () => {
+      const c = getCompressedPublicKey(alice.privateKey);
+      expect(c).toBe(alice.compressedPubkey);
+      expect(c).toMatch(/^[0-9a-f]{66}$/);
     });
 
-    it("should create key pair from hex", () => {
-      const originalKeyPair = {
-        privateKey:
-          "27e2a04464f4e73b9131548b6dffbe47ae49ec7a7562c5a157e6a30f9f1ceb69",
-        publicKey:
-          "0202030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021",
-        nsec: "nsec1test",
-        npub: "npub1test",
-        seedPhrase: "",
-      };
-      const keyPair = fromHex(originalKeyPair.privateKey);
-      console.log("Created key pair from hex:", keyPair);
-      expect(keyPair.privateKey).toBe(originalKeyPair.privateKey);
-      expect(keyPair.publicKey).toBe(originalKeyPair.publicKey);
-      expect(keyPair.nsec).toBe(originalKeyPair.nsec);
-      expect(keyPair.npub).toBe(originalKeyPair.npub);
+    it("fromHex derives the x-only pubkey and matching npub", () => {
+      const kp = fromHex(alice.privateKey);
+      expect(kp.privateKey).toBe(alice.privateKey);
+      expect(kp.publicKey).toBe(alice.xonlyPubkey);
+      expect(kp.publicKey).toMatch(/^[0-9a-f]{64}$/);
+      expect(kp.npub).toBe(alice.npub);
+    });
+
+    it("privateKeyToNpub yields the x-only npub", () => {
+      expect(privateKeyToNpub(alice.privateKey)).toBe(alice.npub);
+    });
+
+    it("seedPhraseToKeyPair derives an x-only pubkey (library sha256-entropy KAT)", () => {
+      const kp = seedPhraseToKeyPair(libSeed.mnemonic);
+      expect(kp.privateKey).toBe(libSeed.privateKey);
+      expect(kp.publicKey).toBe(libSeed.xonlyPubkey);
+      expect(kp.publicKey).toMatch(/^[0-9a-f]{64}$/);
+      expect(kp.npub).toBe(libSeed.npub);
+      expect(seedPhraseToPrivateKey(libSeed.mnemonic)).toBe(libSeed.privateKey);
     });
   });
 
-  describe("Message Signing", () => {
-    it("should sign and verify messages", async () => {
-      const keyPair = seedPhraseToKeyPair(
-        "test test test test test test test test test test test junk",
-      );
+  describe("NIP-19 encoding (real bech32)", () => {
+    it("round-trips npub <-> hex for alice", () => {
+      expect(hexToNpub(alice.xonlyPubkey)).toBe(alice.npub);
+      expect(npubToHex(alice.npub)).toBe(alice.xonlyPubkey);
+    });
+
+    it("round-trips nsec <-> hex for alice", () => {
+      const nsec = hexToNsec(alice.privateKey);
+      expect(nsec).toBe(alice.nsec);
+      expect(nsecToHex(nsec)).toBe(alice.privateKey);
+    });
+
+    it("rejects a 33-byte compressed key when encoding an npub", () => {
+      expect(() => nip19.npubEncode(alice.compressedPubkey)).toThrow();
+      expect(() => hexToNpub(alice.compressedPubkey)).toThrow();
+    });
+  });
+
+  describe("Message signing (real schnorr)", () => {
+    it("signs and verifies a message with the x-only pubkey", async () => {
       const message = "Hello, Nostr!";
-
-      const signature = await signMessage(message, keyPair.privateKey);
-      console.log("Generated signature:", signature);
-      expect(signature).toBeDefined();
-
-      const isValid = await verifySignature(
-        message,
-        signature,
-        keyPair.publicKey,
-      );
-      console.log("Verification result:", isValid);
-      expect(isValid).toBe(true);
+      const sig = await signMessage(message, alice.privateKey);
+      expect(sig).toMatch(/^[0-9a-f]{128}$/);
+      expect(await verifySignature(message, sig, alice.xonlyPubkey)).toBe(true);
     });
 
-    it("should fail verification for invalid signatures", async () => {
-      const keyPair = seedPhraseToKeyPair(
-        "test test test test test test test test test test test junk",
+    it("fails verification for the wrong message", async () => {
+      const sig = await signMessage("Hello, Nostr!", alice.privateKey);
+      expect(await verifySignature("Wrong message", sig, alice.xonlyPubkey)).toBe(
+        false,
       );
-      const message = "Hello, Nostr!";
-      const wrongMessage = "Wrong message";
-
-      const signature = await signMessage(message, keyPair.privateKey);
-      const isValid = await verifySignature(
-        wrongMessage,
-        signature,
-        keyPair.publicKey,
-      );
-      console.log("Verification result for wrong message:", isValid);
-      expect(isValid).toBe(false);
     });
   });
 
-  describe("Event Handling", () => {
-    it("should create and verify events", async () => {
-      const keyPair = seedPhraseToKeyPair(
-        "test test test test test test test test test test test junk",
-      );
-      const event = await createEvent("Hello, Nostr!", 1, keyPair.privateKey, [
+  describe("Event handling (createEvent -> verifyEvent round-trip)", () => {
+    it("creates and verifies an event with real schnorr", async () => {
+      const event = await createEvent("Hello, Nostr!", 1, alice.privateKey, [
         ["t", "test"],
       ]);
-
-      console.log("Created event:", event);
-      expect(event.pubkey).toBe(keyPair.publicKey);
+      expect(event.pubkey).toBe(alice.xonlyPubkey);
+      expect(event.pubkey).toMatch(/^[0-9a-f]{64}$/);
       expect(event.kind).toBe(1);
       expect(event.content).toBe("Hello, Nostr!");
       expect(event.tags).toEqual([["t", "test"]]);
-      expect(event.id).toBeDefined();
-      expect(event.sig).toBeDefined();
+      expect(event.id).toMatch(/^[0-9a-f]{64}$/);
+      expect(event.sig).toMatch(/^[0-9a-f]{128}$/);
 
-      const isValid = await verifyEvent(event);
-      console.log("Verification result:", isValid);
-      expect(isValid).toBe(true);
+      // This is the core regression: with a 33-byte compressed key,
+      // schnorr.verify THROWS. With x-only it round-trips to true.
+      expect(await verifyEvent(event)).toBe(true);
     });
 
-    it("should detect tampered events", async () => {
-      const keyPair = seedPhraseToKeyPair(
-        "test test test test test test test test test test test junk",
-      );
-      const event = await createEvent("Hello, Nostr!", 1, keyPair.privateKey);
-      event.content = "Tampered content"; // Tamper with the content
-      console.log("Event hash mismatch");
-      const isValid = await verifyEvent(event);
-      console.log("Verification result for tampered event:", isValid);
-      expect(isValid).toBe(false);
+    it("computes the known-answer event id from the shared vector", async () => {
+      const ex = vectors.nip01_events.example;
+      // Recreate the exact serialized event and confirm the deterministic id.
+      const { createHash } = await import("node:crypto");
+      const serialized = JSON.stringify([
+        0,
+        ex.pubkey,
+        ex.created_at,
+        ex.kind,
+        ex.tags,
+        ex.content,
+      ]);
+      const id = createHash("sha256").update(serialized).digest("hex");
+      expect(id).toBe(ex.id);
+    });
+
+    it("detects tampered events", async () => {
+      const event = await createEvent("Hello, Nostr!", 1, alice.privateKey);
+      event.content = "Tampered content";
+      expect(await verifyEvent(event)).toBe(false);
     });
   });
 
-  describe("HMAC Configuration", () => {
-    it("should configure HMAC without errors", () => {
+  describe("HMAC configuration", () => {
+    it("configures HMAC without errors", () => {
       expect(() => configureHMAC()).not.toThrow();
     });
   });
 
-  describe("Random Key Generation", () => {
-    it("should work with randomly generated keys", async () => {
+  describe("Random key generation", () => {
+    it("produces x-only keys that sign and verify", async () => {
       const keyPair = generateKeyPairWithSeed();
 
-      // Test key format
       expect(keyPair.privateKey).toMatch(/^[0-9a-f]{64}$/);
-      expect(keyPair.publicKey).toMatch(/^[0-9a-f]{66}$/);
+      expect(keyPair.publicKey).toMatch(/^[0-9a-f]{64}$/); // x-only, not 66
       expect(keyPair.nsec).toMatch(/^nsec1/);
       expect(keyPair.npub).toMatch(/^npub1/);
 
-      // Test signing with random keys
       const message = "Test message";
       const signature = await signMessage(message, keyPair.privateKey);
-      const isValid = await verifySignature(
-        message,
-        signature,
-        keyPair.publicKey,
+      expect(await verifySignature(message, signature, keyPair.publicKey)).toBe(
+        true,
       );
-      expect(isValid).toBe(true);
     });
   });
 });
-
-function hexToBytes(hex: string) {
-  return new Uint8Array(
-    hex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
-  );
-}

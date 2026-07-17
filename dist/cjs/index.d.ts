@@ -123,6 +123,19 @@ export declare function fromHex(privateKeyHex: string): KeyPair;
  */
 export declare function getPublicKey(privateKey: string): string;
 /**
+ * Derives the 33-byte SEC1 compressed public key from a private key.
+ *
+ * This is NOT a valid Nostr/BIP-340 identity key. Nostr uses 32-byte x-only
+ * public keys (see {@link getPublicKey}). Only use this if you specifically
+ * need the compressed SEC1 encoding for ECDH or interop with non-Nostr tooling.
+ *
+ * @deprecated For Nostr identity use {@link getPublicKey} (x-only). Do not
+ *   encode the output of this function as an npub.
+ * @param {string} privateKey - The hex-encoded private key
+ * @returns {string} The 66-hex-char (33-byte) compressed public key
+ */
+export declare function getCompressedPublicKey(privateKey: string): string;
+/**
  * NIP-19 encoding and decoding functions
  * @namespace
  */

@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "description": "Shared, language-neutral Nostr known-answer test vectors. This file is the canonical spine for the Nostr key/crypto family (nostr-nsec-seedphrase, nostr-crypto-utils, browser plugin, ...). All public keys are 32-byte x-only per BIP-340. Copy this file verbatim into sibling projects; do not embed language- or library-specific assertions here.",
+  "references": {
+    "bip340": "https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki",
+    "nip01": "https://github.com/nostr-protocol/nips/blob/master/01.md",
+    "nip06": "https://github.com/nostr-protocol/nips/blob/master/06.md",
+    "nip19": "https://github.com/nostr-protocol/nips/blob/master/19.md"
+  },
+  "keypairs": {
+    "alice": {
+      "note": "BIP-340 test vector: smallest valid secret key (1). x-only pubkey equals the secp256k1 generator point G x-coordinate.",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000001",
+      "xonlyPubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "compressedPubkey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "npub": "npub10xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqpkge6d",
+      "nsec": "nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl"
+    },
+    "bob": {
+      "note": "Secret key = 2.",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000002",
+      "xonlyPubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "compressedPubkey": "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "npub": "npub1ccz8l9zpa47k6vz9gphftsrumpw80rjt3nhnefat4symjhrsnmjs38mnyd",
+      "nsec": "nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqptcfk2"
+    }
+  },
+  "nip06_seedphrase": {
+    "description": "Canonical NIP-06 vector (standard BIP32 derivation m/44'/1237'/account'/0/0 from the BIP39 seed). This is the interoperable standard used across the Nostr ecosystem.",
+    "derivation": "nip06-bip32",
+    "path": "m/44'/1237'/0'/0/0",
+    "mnemonic": "leader monkey parrot ring guide accident before fringe cannon center peace inside",
+    "account": 0,
+    "privateKey": "7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a",
+    "compat_note": "nostr-nsec-seedphrase v0.8.0 does NOT implement standard NIP-06 derivation; it derives the private key as sha256(bip39-entropy). It therefore does not reproduce this vector. See library_seedphrase for a vector this library's seedPhraseToKeyPair actually produces."
+  },
+  "library_seedphrase": {
+    "description": "nostr-nsec-seedphrase-specific derivation: privateKey = sha256(bip39-entropy). Provided so the seed-phrase path has a real known-answer for THIS library. NOT interoperable with standard NIP-06.",
+    "derivation": "sha256-of-bip39-entropy",
+    "mnemonic": "test test test test test test test test test test test junk",
+    "bip39Entropy": "df9bf37e6fcdf9bf37e6fcdf9bf37e3c",
+    "privateKey": "a13b27648ff45bcf53d78bba1170226871a88a2cae91754c0c1e31a087b169d3",
+    "xonlyPubkey": "440cc39940c691e74383996c631699a0ca7b050c29f120dabdc1584afbcec58c",
+    "npub": "npub1gsxv8x2qc6g7wsurn9kxx95e5r98kpgv98cjpk4ac9vy477wckxqanmevf"
+  },
+  "nip19": {
+    "description": "NIP-19 bech32 round-trip vectors. npub encodes a 32-byte x-only pubkey; nsec encodes a 32-byte private key; note encodes a 32-byte event id.",
+    "npub": {
+      "hex": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "encoded": "npub10xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqpkge6d"
+    },
+    "nsec": {
+      "hex": "0000000000000000000000000000000000000000000000000000000000000001",
+      "encoded": "nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl"
+    },
+    "note": {
+      "hex": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "encoded": "note10xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqsutyr9"
+    }
+  },
+  "nip01_events": {
+    "description": "NIP-01 event structure. The event id (sha256 of the serialized [0,pubkey,created_at,kind,tags,content]) is deterministic and can be asserted; BIP-340 schnorr signatures are non-deterministic (aux randomness) so sig is verified by round-trip, not by fixed value.",
+    "example": {
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700000000,
+      "kind": 1,
+      "tags": [["t", "nostr"]],
+      "content": "known-answer test event",
+      "id": "301e57e1240d340489759176d0388be74ab4bfd6d1d036ab8fce877624a455ce",
+      "sig": null
+    }
+  }
+}

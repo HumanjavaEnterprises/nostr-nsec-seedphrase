@@ -21,30 +21,47 @@ const sha2_js_1 = require("@noble/hashes/sha2.js");
 const logger_js_1 = require("../utils/logger.js");
 const nip_19_js_1 = require("../nips/nip-19.js");
 /**
- * Gets the compressed public key (33 bytes with prefix)
- */
-function getCompressedPublicKey(privateKeyBytes) {
-    return secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true);
-}
-/**
  * Gets the schnorr public key (32 bytes x-coordinate) as per BIP340
  */
 function getSchnorrPublicKey(privateKeyBytes) {
     return secp256k1_js_1.schnorr.getPublicKey(privateKeyBytes);
 }
 /**
- * Creates a PublicKeyDetails object from a hex string
+ * Creates a PublicKeyDetails object from a hex public key.
+ *
+ * The canonical Nostr identity is the 32-byte x-only key (BIP-340): `hex`,
+ * `schnorr`, and `npub` all reflect that. `compressed` is the 33-byte SEC1
+ * encoding kept only for non-Nostr interop.
+ *
+ * Accepts either a 32-byte x-only hex or a legacy 33-byte compressed hex; the
+ * output is normalized to x-only.
  */
 function createPublicKey(hex) {
     const bytes = (0, utils_js_1.hexToBytes)(hex);
-    // For schnorr, we need to remove the first byte (compression prefix)
-    const schnorrBytes = bytes.length === 33 ? bytes.slice(1) : bytes;
-    return {
-        hex,
-        compressed: bytes.length === 33 ? bytes : getCompressedPublicKey(bytes),
-        schnorr: schnorrBytes,
-        npub: (0, nip_19_js_1.hexToNpub)(hex),
-    };
+    if (bytes.length === 32) {
+        // x-only input. Reconstruct the compressed form assuming even Y per BIP-340.
+        const compressed = new Uint8Array(33);
+        compressed[0] = 0x02;
+        compressed.set(bytes, 1);
+        return {
+            hex,
+            compressed,
+            schnorr: bytes,
+            npub: (0, nip_19_js_1.hexToNpub)(hex),
+        };
+    }
+    if (bytes.length === 33) {
+        // Legacy compressed input: normalize to x-only.
+        const schnorrBytes = bytes.slice(1);
+        const xonlyHex = (0, utils_js_1.bytesToHex)(schnorrBytes);
+        return {
+            hex: xonlyHex,
+            compressed: bytes,
+            schnorr: schnorrBytes,
+            npub: (0, nip_19_js_1.hexToNpub)(xonlyHex),
+        };
+    }
+    throw new Error(`Invalid public key length: expected 32 (x-only) or 33 (compressed) bytes, got ${bytes.length}`);
 }
 /**
  * Generates a new BIP39 seed phrase
@@ -98,7 +115,7 @@ async function seedPhraseToKeyPair(seedPhrase) {
         const privateKey = derivePrivateKey(entropy);
         entropy.fill(0); // zero sensitive material
         const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
-        const publicKey = createPublicKey((0, utils_js_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
+        const publicKey = createPublicKey((0, utils_js_1.bytesToHex)(getSchnorrPublicKey(privateKeyBytes)));
         privateKeyBytes.fill(0); // zero sensitive material
         return {
             privateKey,
@@ -151,7 +168,7 @@ async function fromHex(privateKeyHex) {
             privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
-        const publicKey = createPublicKey((0, utils_js_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes)));
+        const publicKey = createPublicKey((0, utils_js_1.bytesToHex)(getSchnorrPublicKey(privateKeyBytes)));
         privateKeyBytes.fill(0); // zero sensitive material
         return {
             privateKey: privateKeyHex,
@@ -182,7 +199,8 @@ async function validateKeyPair(publicKey, privateKey) {
             };
         }
         const pubKeyHex = typeof publicKey === "string" ? publicKey : publicKey.hex;
-        const derivedPublicKey = (0, utils_js_1.bytesToHex)(getCompressedPublicKey(privateKeyBytes));
+        // Compare against the 32-byte x-only key (BIP-340 / Nostr identity).
+        const derivedPublicKey = (0, utils_js_1.bytesToHex)(getSchnorrPublicKey(privateKeyBytes));
         privateKeyBytes.fill(0); // zero sensitive material
         if (pubKeyHex !== derivedPublicKey) {
             return {
@@ -210,7 +228,8 @@ async function validateKeyPair(publicKey, privateKey) {
 function validatePublicKey(publicKey) {
     try {
         const bytes = (0, utils_js_1.hexToBytes)(publicKey);
-        return bytes.length === 32 || bytes.length === 33;
+        // Nostr public keys are 32-byte x-only keys (BIP-340) only.
+        return bytes.length === 32;
     }
     catch (error) {
         logger_js_1.logger.error("Failed to validate public key:", error?.toString());

@@ -25,7 +25,7 @@ A focused TypeScript library for Nostr key management and seedphrase functionali
   - Convert between formats (hex, nsec, npub)
   - Validate key pairs
   - Generate new key pairs
-  - Public key derivation
+  - Public key derivation — **32-byte x-only keys per BIP-340** (Nostr identity)
 
 - 📝 **Delegation Support (NIP-26)**
   - Create delegation tokens
@@ -79,12 +79,18 @@ import { seedPhraseToKeyPair } from 'nostr-nsec-seedphrase';
 
 const keyPair = await seedPhraseToKeyPair('your twelve word seed phrase here');
 console.log({
-  privateKey: keyPair.privateKey, // hex format
-  publicKey: keyPair.publicKey,   // hex format
+  privateKey: keyPair.privateKey, // 32-byte private key (hex)
+  publicKey: keyPair.publicKey,   // 32-byte x-only public key (hex, BIP-340)
   nsec: keyPair.nsec,            // bech32 format
   npub: keyPair.npub             // bech32 format
 });
 ```
+
+> **Public keys are 32-byte x-only keys (BIP-340), as required by Nostr.**
+> `getPublicKey`, `seedPhraseToKeyPair`, `fromHex`, and `privateKeyToNpub` all
+> return the 64-hex-char x-only key. If you specifically need the 33-byte SEC1
+> compressed key (for ECDH / non-Nostr interop), use `getCompressedPublicKey`.
+> This changed in v0.8.0 (previously 33-byte compressed) — see CHANGELOG.
 
 ### Create and Verify Delegations
 

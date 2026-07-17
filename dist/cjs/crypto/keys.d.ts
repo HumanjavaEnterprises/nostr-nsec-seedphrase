@@ -4,7 +4,14 @@
  */
 import { KeyPair, PublicKeyDetails, ValidationResult, PublicKey } from "../types/keys.js";
 /**
- * Creates a PublicKeyDetails object from a hex string
+ * Creates a PublicKeyDetails object from a hex public key.
+ *
+ * The canonical Nostr identity is the 32-byte x-only key (BIP-340): `hex`,
+ * `schnorr`, and `npub` all reflect that. `compressed` is the 33-byte SEC1
+ * encoding kept only for non-Nostr interop.
+ *
+ * Accepts either a 32-byte x-only hex or a legacy 33-byte compressed hex; the
+ * output is normalized to x-only.
  */
 export declare function createPublicKey(hex: string): PublicKeyDetails;
 /**

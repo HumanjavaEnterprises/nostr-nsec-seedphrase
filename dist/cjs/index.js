@@ -8,6 +8,7 @@ exports.seedPhraseToKeyPair = seedPhraseToKeyPair;
 exports.generateKeyPairWithSeed = generateKeyPairWithSeed;
 exports.fromHex = fromHex;
 exports.getPublicKey = getPublicKey;
+exports.getCompressedPublicKey = getCompressedPublicKey;
 exports.signEvent = signEvent;
 exports.verifyEvent = verifyEvent;
 exports.configureHMAC = configureHMAC;
@@ -31,7 +32,7 @@ const sha2_js_1 = require("@noble/hashes/sha2.js");
 const hmac_js_1 = require("@noble/hashes/hmac.js");
 const bech32_1 = require("bech32");
 const nostr_crypto_utils_1 = require("nostr-crypto-utils");
-const logger_1 = require("./utils/logger");
+const logger_js_1 = require("./utils/logger.js");
 /**
  * Generates a new BIP39 seed phrase
  * @returns {string} A random 12-word BIP39 mnemonic seed phrase
@@ -68,10 +69,10 @@ function getEntropyFromSeedPhrase(seedPhrase) {
  * console.log(isValid); // true
  */
 function validateSeedPhrase(seedPhrase) {
-    logger_1.logger.log("Validating seed phrase");
-    logger_1.logger.log("Input being validated");
+    logger_js_1.logger.log("Validating seed phrase");
+    logger_js_1.logger.log("Input being validated");
     const isValid = (0, bip39_1.validateMnemonic)(seedPhrase);
-    logger_1.logger.log({ isValid }, "Validated seed phrase");
+    logger_js_1.logger.log({ isValid }, "Validated seed phrase");
     return Boolean(isValid);
 }
 /**
@@ -94,8 +95,8 @@ function seedPhraseToKeyPair(seedPhrase) {
         entropy.fill(0); // zero sensitive material
         const privateKeyHex = (0, utils_js_1.bytesToHex)(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
-        // Derive the public key
-        const publicKeyBytes = secp256k1_js_1.secp256k1.getPublicKey((0, utils_js_1.hexToBytes)(privateKeyHex), true); // Force compressed format
+        // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
+        const publicKeyBytes = secp256k1_js_1.schnorr.getPublicKey((0, utils_js_1.hexToBytes)(privateKeyHex));
         const publicKey = (0, utils_js_1.bytesToHex)(publicKeyBytes);
         // Generate the nsec and npub formats
         const nsec = exports.nip19.nsecEncode(privateKeyHex);
@@ -109,7 +110,7 @@ function seedPhraseToKeyPair(seedPhrase) {
         };
     }
     catch (error) {
-        logger_1.logger.error("Failed to create key pair from seed phrase:", error?.toString());
+        logger_js_1.logger.error("Failed to create key pair from seed phrase:", error?.toString());
         throw error;
     }
 }
@@ -145,8 +146,8 @@ function fromHex(privateKeyHex) {
             privateKeyBytes.fill(0); // zero sensitive material
             throw new Error("Invalid private key");
         }
-        // Derive the public key
-        const publicKeyBytes = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
+        const publicKeyBytes = secp256k1_js_1.schnorr.getPublicKey(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         const publicKey = (0, utils_js_1.bytesToHex)(publicKeyBytes);
         // Generate the nsec and npub formats
@@ -161,7 +162,7 @@ function fromHex(privateKeyHex) {
         };
     }
     catch (error) {
-        logger_1.logger.error("Failed to create key pair from hex:", error?.toString());
+        logger_js_1.logger.error("Failed to create key pair from hex:", error?.toString());
         throw error;
     }
 }
@@ -176,12 +177,37 @@ function fromHex(privateKeyHex) {
 function getPublicKey(privateKey) {
     try {
         const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
-        const publicKeyBytes = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true); // Force compressed format
+        // 32-byte x-only public key (BIP-340 / Nostr identity)
+        const publicKeyBytes = secp256k1_js_1.schnorr.getPublicKey(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         return (0, utils_js_1.bytesToHex)(publicKeyBytes);
     }
     catch (error) {
-        logger_1.logger.error("Failed to get public key:", error?.toString());
+        logger_js_1.logger.error("Failed to get public key:", error?.toString());
+        throw error;
+    }
+}
+/**
+ * Derives the 33-byte SEC1 compressed public key from a private key.
+ *
+ * This is NOT a valid Nostr/BIP-340 identity key. Nostr uses 32-byte x-only
+ * public keys (see {@link getPublicKey}). Only use this if you specifically
+ * need the compressed SEC1 encoding for ECDH or interop with non-Nostr tooling.
+ *
+ * @deprecated For Nostr identity use {@link getPublicKey} (x-only). Do not
+ *   encode the output of this function as an npub.
+ * @param {string} privateKey - The hex-encoded private key
+ * @returns {string} The 66-hex-char (33-byte) compressed public key
+ */
+function getCompressedPublicKey(privateKey) {
+    try {
+        const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
+        const publicKeyBytes = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true);
+        privateKeyBytes.fill(0); // zero sensitive material
+        return (0, utils_js_1.bytesToHex)(publicKeyBytes);
+    }
+    catch (error) {
+        logger_js_1.logger.error("Failed to get compressed public key:", error?.toString());
         throw error;
     }
 }
@@ -197,6 +223,11 @@ exports.nip19 = {
      */
     npubEncode(pubkey) {
         const data = (0, utils_js_1.hexToBytes)(pubkey);
+        // Nostr npubs are 32-byte x-only public keys (BIP-340). Reject anything
+        // else (e.g. a 33-byte compressed key) so it can never be silently encoded.
+        if (data.length !== 32) {
+            throw new Error(`Invalid public key: npub requires a 32-byte x-only key, got ${data.length} bytes`);
+        }
         const words = bech32_1.bech32.toWords(Uint8Array.from(data));
         return bech32_1.bech32.encode("npub", words, 1000);
     },
@@ -309,11 +340,11 @@ async function signEvent(event, privateKey) {
         const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
         const signature = secp256k1_js_1.schnorr.sign((0, utils_js_1.hexToBytes)(eventHash), privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
-        logger_1.logger.log("Event signed successfully");
+        logger_js_1.logger.log("Event signed successfully");
         return (0, utils_js_1.bytesToHex)(signature);
     }
     catch (error) {
-        logger_1.logger.error("Failed to sign event:", error?.toString());
+        logger_js_1.logger.error("Failed to sign event:", error?.toString());
         throw error;
     }
 }
@@ -328,19 +359,19 @@ async function signEvent(event, privateKey) {
 async function verifyEvent(event) {
     try {
         if (!event.id || !event.pubkey || !event.sig) {
-            logger_1.logger.log("Invalid event: missing required fields");
+            logger_js_1.logger.log("Invalid event: missing required fields");
             return false;
         }
         const hash = getEventHash(event);
         if (hash !== event.id) {
-            logger_1.logger.log("Event hash mismatch");
+            logger_js_1.logger.log("Event hash mismatch");
             return false;
         }
-        logger_1.logger.log("Verifying event signature");
+        logger_js_1.logger.log("Verifying event signature");
         return secp256k1_js_1.schnorr.verify((0, utils_js_1.hexToBytes)(event.sig), (0, utils_js_1.hexToBytes)(hash), (0, utils_js_1.hexToBytes)(event.pubkey));
     }
     catch (error) {
-        logger_1.logger.error("Failed to verify event:", error?.toString());
+        logger_js_1.logger.error("Failed to verify event:", error?.toString());
         throw error;
     }
 }
@@ -368,9 +399,9 @@ function configureHMAC() {
         secp256k1_js_1.secp256k1.utils.hmacSha256Sync = hmacSyncFunction;
     }
     else {
-        logger_1.logger.log("secp256k1.utils.hmacSha256Sync not found; HMAC configuration skipped (library may handle HMAC internally)");
+        logger_js_1.logger.log("secp256k1.utils.hmacSha256Sync not found; HMAC configuration skipped (library may handle HMAC internally)");
     }
-    logger_1.logger.log("Configured HMAC for secp256k1");
+    logger_js_1.logger.log("Configured HMAC for secp256k1");
 }
 /**
  * Creates a new signed Nostr event
@@ -400,7 +431,7 @@ async function createEvent(content, kind, privateKey, tags = []) {
     };
     const id = getEventHash(event);
     const sig = await signEvent(event, privateKey);
-    logger_1.logger.log("Created new Nostr event");
+    logger_js_1.logger.log("Created new Nostr event");
     return {
         ...event,
         id,
@@ -433,7 +464,7 @@ function privateKeyToNsec(privateKey) {
         return exports.nip19.nsecEncode(privateKey);
     }
     catch (error) {
-        logger_1.logger.error("Failed to encode nsec:", error?.toString());
+        logger_js_1.logger.error("Failed to encode nsec:", error?.toString());
         throw error;
     }
 }
@@ -449,12 +480,13 @@ function privateKeyToNsec(privateKey) {
 function privateKeyToNpub(privateKey) {
     try {
         const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
-        const publicKey = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true);
+        // 32-byte x-only public key (BIP-340 / Nostr identity)
+        const publicKey = secp256k1_js_1.schnorr.getPublicKey(privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
         return exports.nip19.npubEncode((0, utils_js_1.bytesToHex)(publicKey));
     }
     catch (error) {
-        logger_1.logger.error("Failed to encode npub:", error?.toString());
+        logger_js_1.logger.error("Failed to encode npub:", error?.toString());
         throw error;
     }
 }
@@ -470,11 +502,11 @@ function privateKeyToNpub(privateKey) {
 function nsecToHex(nsec) {
     try {
         const hexPrivateKey = exports.nip19.nsecDecode(nsec);
-        logger_1.logger.log("Converted nsec to hex");
+        logger_js_1.logger.log("Converted nsec to hex");
         return hexPrivateKey;
     }
     catch (error) {
-        logger_1.logger.error("Failed to decode nsec:", error?.toString());
+        logger_js_1.logger.error("Failed to decode nsec:", error?.toString());
         throw error;
     }
 }
@@ -493,11 +525,11 @@ function npubToHex(npub) {
         if (type !== "npub") {
             throw new Error("Invalid npub format");
         }
-        logger_1.logger.log("Converted npub to hex");
+        logger_js_1.logger.log("Converted npub to hex");
         return (0, utils_js_1.bytesToHex)(data);
     }
     catch (error) {
-        logger_1.logger.error("Failed to decode npub:", error?.toString());
+        logger_js_1.logger.error("Failed to decode npub:", error?.toString());
         throw error;
     }
 }
@@ -512,11 +544,11 @@ function npubToHex(npub) {
  */
 function hexToNpub(publicKeyHex) {
     try {
-        logger_1.logger.log("Converting hex to npub");
+        logger_js_1.logger.log("Converting hex to npub");
         return exports.nip19.npubEncode(publicKeyHex);
     }
     catch (error) {
-        logger_1.logger.error("Failed to encode npub:", error?.toString());
+        logger_js_1.logger.error("Failed to encode npub:", error?.toString());
         throw error;
     }
 }
@@ -531,11 +563,11 @@ function hexToNpub(publicKeyHex) {
  */
 function hexToNsec(privateKeyHex) {
     try {
-        logger_1.logger.log("Converting hex to nsec");
+        logger_js_1.logger.log("Converting hex to nsec");
         return exports.nip19.nsecEncode(privateKeyHex);
     }
     catch (error) {
-        logger_1.logger.error("Failed to encode nsec:", error?.toString());
+        logger_js_1.logger.error("Failed to encode nsec:", error?.toString());
         throw error;
     }
 }
@@ -557,11 +589,11 @@ async function signMessage(message, privateKey) {
         const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKey);
         const signature = secp256k1_js_1.schnorr.sign((0, utils_js_1.hexToBytes)(messageHashHex), privateKeyBytes);
         privateKeyBytes.fill(0); // zero sensitive material
-        logger_1.logger.log("Message signed successfully");
+        logger_js_1.logger.log("Message signed successfully");
         return (0, utils_js_1.bytesToHex)(signature);
     }
     catch (error) {
-        logger_1.logger.error("Failed to sign message:", error?.toString());
+        logger_js_1.logger.error("Failed to sign message:", error?.toString());
         throw error;
     }
 }
@@ -580,11 +612,11 @@ async function verifySignature(message, signature, publicKey) {
         const messageBytes = new TextEncoder().encode(message);
         const messageHash = (0, sha2_js_1.sha256)(messageBytes);
         const messageHashHex = (0, utils_js_1.bytesToHex)(messageHash);
-        logger_1.logger.log("Verifying message signature");
+        logger_js_1.logger.log("Verifying message signature");
         return secp256k1_js_1.schnorr.verify((0, utils_js_1.hexToBytes)(signature), (0, utils_js_1.hexToBytes)(messageHashHex), (0, utils_js_1.hexToBytes)(publicKey));
     }
     catch (error) {
-        logger_1.logger.error("Failed to verify signature:", error?.toString());
+        logger_js_1.logger.error("Failed to verify signature:", error?.toString());
         throw error;
     }
 }
@@ -602,7 +634,7 @@ function nsecToPrivateKey(nsec) {
         return exports.nip19.nsecDecode(nsec);
     }
     catch (error) {
-        logger_1.logger.error("Failed to decode nsec:", error?.toString());
+        logger_js_1.logger.error("Failed to decode nsec:", error?.toString());
         throw error;
     }
 }
@@ -625,7 +657,7 @@ function toNcryptsec(privateKeyHex, password, logn = 16) {
         return result;
     }
     catch (error) {
-        logger_1.logger.error("Failed to encrypt private key to ncryptsec:", error?.toString());
+        logger_js_1.logger.error("Failed to encrypt private key to ncryptsec:", error?.toString());
         throw error;
     }
 }
@@ -647,7 +679,7 @@ function fromNcryptsec(ncryptsec, password) {
         return hex;
     }
     catch (error) {
-        logger_1.logger.error("Failed to decrypt ncryptsec:", error?.toString());
+        logger_js_1.logger.error("Failed to decrypt ncryptsec:", error?.toString());
         throw error;
     }
 }

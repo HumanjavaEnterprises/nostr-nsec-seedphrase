@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-16
+
+### Changed
+- **BREAKING: public keys are now 32-byte x-only per BIP-340 (were 33-byte
+  compressed).** `getPublicKey`, `seedPhraseToKeyPair`, `fromHex`,
+  `privateKeyToNpub`, and generated `KeyPair.publicKey`/`npub` now return the
+  32-byte (64 hex char) x-only key required by Nostr. Previously they returned a
+  33-byte (66 hex char) compressed key, producing non-standard npubs.
+- `sign → verify` now round-trips: `verifyEvent`/`verifySignature` previously
+  **threw** under real crypto because `schnorr.verify` rejects a 33-byte key.
+- `validatePublicKey` now accepts only 32-byte x-only keys (previously 32 or 33).
+
+### Added
+- `getCompressedPublicKey(privateKey)` for the rare non-Nostr case that truly
+  needs the 33-byte SEC1 compressed key. Deprecated for identity use.
+- Shared, language-neutral known-answer vector file at
+  `test/vectors/nostr-vectors.json` (BIP-340 keypairs, NIP-06 reference, NIP-19
+  round-trips, NIP-01 event id). Tests read from it.
+- Real-crypto known-answer tests (no mocks), including a full
+  `createEvent → verifyEvent` round-trip.
+
+### Fixed
+- `npub` encoders now reject non-32-byte input so a compressed key can never be
+  silently encoded as an npub.
+- Tests now run against REAL `@noble` crypto; removed the mocks that hid the
+  compressed-vs-x-only bug.
+- Added the missing `.js` extension on the internal `logger` import so the built
+  ESM/CJS package resolves correctly.
+
 ## [0.7.0] - 2026-03-06
 
 ### Changed
