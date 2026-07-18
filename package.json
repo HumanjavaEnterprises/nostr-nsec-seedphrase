@@ -63,7 +63,7 @@
     "@scure/bip32": "^2.2.0",
     "bech32": "^2.0.0",
     "bip39": "^3.1.0",
-    "nostr-crypto-utils": "^0.7.0",
+    "nostr-crypto-utils": "^0.8.0",
     "pino": "^10.3.1"
   },
   "devDependencies": {
