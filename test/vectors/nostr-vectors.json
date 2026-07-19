@@ -1,0 +1,225 @@
+{
+  "version": "1.2.0",
+  "description": "Shared, language-neutral Nostr known-answer test vectors. This file is the canonical spine for the Nostr key/crypto family (nostr-nsec-seedphrase, nostr-crypto-utils, browser plugin, ...). All public keys are 32-byte x-only per BIP-340. Copy this file verbatim into sibling projects; do not embed language- or library-specific assertions here.",
+  "references": {
+    "bip340": "https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki",
+    "nip01": "https://github.com/nostr-protocol/nips/blob/master/01.md",
+    "nip06": "https://github.com/nostr-protocol/nips/blob/master/06.md",
+    "nip19": "https://github.com/nostr-protocol/nips/blob/master/19.md"
+  },
+  "keypairs": {
+    "alice": {
+      "note": "BIP-340 test vector: smallest valid secret key (1). x-only pubkey equals the secp256k1 generator point G x-coordinate.",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000001",
+      "xonlyPubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "compressedPubkey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "npub": "npub10xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqpkge6d",
+      "nsec": "nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl"
+    },
+    "bob": {
+      "note": "Secret key = 2.",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000002",
+      "xonlyPubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "compressedPubkey": "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "npub": "npub1ccz8l9zpa47k6vz9gphftsrumpw80rjt3nhnefat4symjhrsnmjs38mnyd",
+      "nsec": "nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqptcfk2"
+    }
+  },
+  "nip06_seedphrase": [
+    {
+      "description": "Official NIP-06 spec test vector 1 (standard BIP32 derivation m/44'/1237'/account'/0/0 from the BIP39 seed). Interoperable across the Nostr ecosystem (Alby, nos2x, nak, nostrkey Python, ...). seedPhraseToKeyPair MUST reproduce this.",
+      "derivation": "nip06-bip32",
+      "path": "m/44'/1237'/0'/0/0",
+      "mnemonic": "leader monkey parrot ring guide accident before fence cannon height naive bean",
+      "account": 0,
+      "privateKey": "7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a",
+      "nsec": "nsec10allq0gjx7fddtzef0ax00mdps9t2kmtrldkyjfs8l5xruwvh2dq0lhhkp",
+      "xonlyPubkey": "17162c921dc4d2518f9a101db33695df1afb56ab82f5ff3e5da6eec3ca5cd917",
+      "npub": "npub1zutzeysacnf9rru6zqwmxd54mud0k44tst6l70ja5mhv8jjumytsd2x7nu"
+    },
+    {
+      "description": "Official NIP-06 spec test vector 2 (24-word mnemonic, account 0).",
+      "derivation": "nip06-bip32",
+      "path": "m/44'/1237'/0'/0/0",
+      "mnemonic": "what bleak badge arrange retreat wolf trade produce cricket blur garlic valid proud rude strong choose busy staff weather area salt hollow arm fade",
+      "account": 0,
+      "privateKey": "c15d739894c81a2fcfd3a2df85a0d2c0dbc47a280d092799f144d73d7ae78add",
+      "nsec": "nsec1c9wh8xy5eqdzln7n5t0ctgxjcrdug73gp5yj0x03gntn67h83twssdfhel",
+      "xonlyPubkey": "d41b22899549e1f3d335a31002cfd382174006e166d3e658e3a5eecdb6463573",
+      "npub": "npub16sdj9zv4f8sl85e45vgq9n7nsgt5qphpvmf7vk8r5hhvmdjxx4es8rq74h"
+    }
+  ],
+  "library_seedphrase": {
+    "description": "LEGACY nostr-nsec-seedphrase derivation (pre-0.8.0): privateKey = sha256(bip39-entropy). NOT NIP-06, NOT interoperable. Kept as the known-answer for the recovery path (seedPhraseToPrivateKeyLegacy / seedPhraseToKeyPairLegacy) so identities created before the NIP-06 fix remain recoverable.",
+    "derivation": "sha256-of-bip39-entropy",
+    "mnemonic": "test test test test test test test test test test test junk",
+    "bip39Entropy": "df9bf37e6fcdf9bf37e6fcdf9bf37e3c",
+    "privateKey": "a13b27648ff45bcf53d78bba1170226871a88a2cae91754c0c1e31a087b169d3",
+    "xonlyPubkey": "440cc39940c691e74383996c631699a0ca7b050c29f120dabdc1584afbcec58c",
+    "npub": "npub1gsxv8x2qc6g7wsurn9kxx95e5r98kpgv98cjpk4ac9vy477wckxqanmevf"
+  },
+  "nip19": {
+    "description": "NIP-19 bech32 round-trip vectors. npub encodes a 32-byte x-only pubkey; nsec encodes a 32-byte private key; note encodes a 32-byte event id.",
+    "npub": {
+      "hex": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "encoded": "npub10xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqpkge6d"
+    },
+    "nsec": {
+      "hex": "0000000000000000000000000000000000000000000000000000000000000001",
+      "encoded": "nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl"
+    },
+    "note": {
+      "hex": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "encoded": "note10xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqsutyr9"
+    }
+  },
+  "nip01_events": {
+    "description": "NIP-01 event structure. The event id (sha256 of the serialized [0,pubkey,created_at,kind,tags,content]) is deterministic and can be asserted; BIP-340 schnorr signatures are non-deterministic (aux randomness) so sig is verified by round-trip, not by fixed value.",
+    "example": {
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700000000,
+      "kind": 1,
+      "tags": [
+        [
+          "t",
+          "nostr"
+        ]
+      ],
+      "content": "known-answer test event",
+      "id": "301e57e1240d340489759176d0388be74ab4bfd6d1d036ab8fce877624a455ce",
+      "sig": null
+    }
+  },
+  "nip19_tlv": {
+    "description": "NIP-19 TLV (bech32) known-answer vectors, cross-checked byte-for-byte against nostr-tools 2.x. naddr TLV layout is SPECIAL(0)=UTF-8 d-tag identifier, AUTHOR(2)=32-byte pubkey, KIND(3)=uint32 BE, RELAY(1)=relay URLs (no TLV type 4). Encoders MUST reproduce `encoded` exactly; decoders MUST recover the components.",
+    "nprofile": {
+      "pubkey": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d",
+      "relays": [
+        "wss://relay.example.com"
+      ],
+      "encoded": "nprofile1qythwumn8ghj7un9d3shjtn90psk6urvv5hxxmmdqqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gj7sqkj"
+    },
+    "nevent": {
+      "id": "cf8de9db67a1d7261b705d9b9f4b77013e96f75e3b876fd79a90dfeaa37d4e35",
+      "author": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d",
+      "kind": 1,
+      "relays": [
+        "wss://relay.example.com"
+      ],
+      "encoded": "nevent1qvzqqqqqqypzqwlsccluhy6xxsr6l9a9uhhxf75g85g8a709tprjcn4e42h053vaqythwumn8ghj7un9d3shjtn90psk6urvv5hxxmmdqqsvlr0fmdn6r4exrdc9mxulfdmsz05k7a0rhpm067dfphl25d75udgejw2vy"
+    },
+    "naddr": {
+      "identifier": "banana",
+      "pubkey": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d",
+      "kind": 30023,
+      "relays": [
+        "wss://relay.example.com"
+      ],
+      "encoded": "naddr1qvzqqqr4gupzqwlsccluhy6xxsr6l9a9uhhxf75g85g8a709tprjcn4e42h053vaqythwumn8ghj7un9d3shjtn90psk6urvv5hxxmmdqqrxyctwv9hxz4zlc3m"
+    },
+    "naddr_no_relays": {
+      "identifier": "my-article",
+      "pubkey": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d",
+      "kind": 30023,
+      "encoded": "naddr1qvzqqqr4gupzqwlsccluhy6xxsr6l9a9uhhxf75g85g8a709tprjcn4e42h053vaqq9x67fdv9e8g6trd3jsrnn0q2"
+    }
+  },
+  "nip44": {
+    "description": "NIP-44 v2 official known-answer vectors, imported from nostr-protocol/nips nip44.vectors.json. get_conversation_key: ECDH(sec1,pub2)+HKDF-extract('nip44-v2'). encrypt_decrypt: encrypt(plaintext, conversation_key, nonce) MUST equal payload (base64), and decrypt(payload, conversation_key) MUST equal plaintext.",
+    "reference": "https://github.com/nostr-protocol/nips/blob/master/44.md",
+    "get_conversation_key": [
+      {
+        "sec1": "315e59ff51cb9209768cf7da80791ddcaae56ac9775eb25b6dee1234bc5d2268",
+        "pub2": "c2f9d9948dc8c7c38321e4b85c8558872eafa0641cd269db76848a6073e69133",
+        "conversation_key": "3dfef0ce2a4d80a25e7a328accf73448ef67096f65f79588e358d9a0eb9013f1"
+      },
+      {
+        "sec1": "a1e37752c9fdc1273be53f68c5f74be7c8905728e8de75800b94262f9497c86e",
+        "pub2": "03bb7947065dde12ba991ea045132581d0954f042c84e06d8c00066e23c1a800",
+        "conversation_key": "4d14f36e81b8452128da64fe6f1eae873baae2f444b02c950b90e43553f2178b"
+      },
+      {
+        "sec1": "98a5902fd67518a0c900f0fb62158f278f94a21d6f9d33d30cd3091195500311",
+        "pub2": "aae65c15f98e5e677b5050de82e3aba47a6fe49b3dab7863cf35d9478ba9f7d1",
+        "conversation_key": "9c00b769d5f54d02bf175b7284a1cbd28b6911b06cda6666b2243561ac96bad7"
+      }
+    ],
+    "encrypt_decrypt": [
+      {
+        "conversation_key": "c41c775356fd92eadc63ff5a0dc1da211b268cbea22316767095b2871ea1412d",
+        "nonce": "0000000000000000000000000000000000000000000000000000000000000001",
+        "plaintext": "a",
+        "payload": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABee0G5VSK0/9YypIObAtDKfYEAjD35uVkHyB0F4DwrcNaCXlCWZKaArsGrY6M9wnuTMxWfp1RTN9Xga8no+kF5Vsb"
+      },
+      {
+        "conversation_key": "c41c775356fd92eadc63ff5a0dc1da211b268cbea22316767095b2871ea1412d",
+        "nonce": "f00000000000000000000000000000f00000000000000000000000000000000f",
+        "plaintext": "🍕🫃",
+        "payload": "AvAAAAAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAAPSKSK6is9ngkX2+cSq85Th16oRTISAOfhStnixqZziKMDvB0QQzgFZdjLTPicCJaV8nDITO+QfaQ61+KbWQIOO2Yj"
+      },
+      {
+        "conversation_key": "3e2b52a63be47d34fe0a80e34e73d436d6963bc8f39827f327057a9986c20a45",
+        "nonce": "b635236c42db20f021bb8d1cdff5ca75dd1a0cc72ea742ad750f33010b24f73b",
+        "plaintext": "表ポあA鷗ŒéＢ逍Üßªąñ丂㐀𠀀",
+        "payload": "ArY1I2xC2yDwIbuNHN/1ynXdGgzHLqdCrXUPMwELJPc7s7JqlCMJBAIIjfkpHReBPXeoMCyuClwgbT419jUWU1PwaNl4FEQYKCDKVJz+97Mp3K+Q2YGa77B6gpxB/lr1QgoqpDf7wDVrDmOqGoiPjWDqy8KzLueKDcm9BVP8xeTJIxs="
+      },
+      {
+        "conversation_key": "d5a2f879123145a4b291d767428870f5a8d9e5007193321795b40183d4ab8c2b",
+        "nonce": "b20989adc3ddc41cd2c435952c0d59a91315d8c5218d5040573fc3749543acaf",
+        "plaintext": "ability🤝的 ȺȾ",
+        "payload": "ArIJia3D3cQc0sQ1lSwNWakTFdjFIY1QQFc/w3SVQ6yvbG2S0x4Yu86QGwPTy7mP3961I1XqB6SFFTzqDZZavhxoWMj7mEVGMQIsh2RLWI5EYQaQDIePSnXPlzf7CIt+voTD"
+      }
+    ],
+    "calc_padded_len": [
+      [
+        16,
+        32
+      ],
+      [
+        32,
+        32
+      ],
+      [
+        33,
+        64
+      ],
+      [
+        37,
+        64
+      ],
+      [
+        45,
+        64
+      ],
+      [
+        49,
+        64
+      ],
+      [
+        64,
+        64
+      ],
+      [
+        65,
+        96
+      ]
+    ]
+  },
+  "nip49": {
+    "description": "NIP-49 (ncryptsec) official spec reference vector. decrypt(ncryptsec, password) MUST yield privateKey. Encryption is non-deterministic (random salt/nonce) so only decrypt is a KAT.",
+    "reference": "https://github.com/nostr-protocol/nips/blob/master/49.md",
+    "password": "nostr",
+    "logn": 16,
+    "ncryptsec": "ncryptsec1qgg9947rlpvqu76pj5ecreduf9jxhselq2nae2kghhvd5g7dgjtcxfqtd67p9m0w57lspw8gsq6yphnm8623nsl8xn9j4jdzz84zm3frztj3z7s35vpzmqf6ksu8r89qk5z2zxfmu5gv8th8wclt0h4p",
+    "privateKey": "3501454135014541350145413501453fefb02227e449e57cf4d3a3ce05378683"
+  },
+  "bip340": {
+    "description": "BIP-340 schnorr sign/verify KAT (official BIP-340 test vector index 1). With aux_rand = 32 zero bytes the signature is deterministic: sign(message, privateKey, zeros) MUST equal signature, and verify(signature, message, xonlyPubkey) MUST be true.",
+    "reference": "https://github.com/bitcoin/bips/blob/master/bip-0340/test-vectors.csv",
+    "privateKey": "0000000000000000000000000000000000000000000000000000000000000003",
+    "xonlyPubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+    "auxRand": "0000000000000000000000000000000000000000000000000000000000000000",
+    "message": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signature": "e907831f80848d1069a5371b402410364bdf1c5f8307b0084c55f1ce2dca821525f66a4a85ea8b71e482a74f382d2ce5ebeee8fdb2172f477df4900d310536c0"
+  }
+}

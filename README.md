@@ -13,11 +13,21 @@
 
 A focused TypeScript library for Nostr key management and seedphrase functionality, with seamless integration with nostr-crypto-utils. This package specializes in converting between nsec keys and seed phrases, managing delegations, and handling various key formats.
 
+> **Release note — v0.8.0 (staged, pending publish).** Part of the coordinated
+> 2026-07 correctness pass across the Nostr library family. This release makes
+> seed-phrase derivation NIP-06 compliant (BIP-32 `m/44'/1237'/0'/0/0`) and public
+> keys 32-byte x-only per BIP-340, verified against a shared known-answer vector set
+> (including the official NIP-06 spec vectors). Both are **breaking** — see
+> [CHANGELOG.md](CHANGELOG.md). The family dogfoods only its own libraries — no
+> upstream `nostr-tools` dependency.
+
 ## Core Features
 
 - 🌱 **Seedphrase Management**
   - Generate and validate BIP39 seed phrases
-  - Convert between seed phrases and Nostr keys
+  - Convert between seed phrases and Nostr keys — **standard NIP-06
+    derivation (BIP-32 path `m/44'/1237'/0'/0/0`)**, interoperable with
+    Alby, nos2x, nak, and other NIP-06 tooling
   - Secure entropy generation
   - Multiple language support
 
@@ -25,7 +35,7 @@ A focused TypeScript library for Nostr key management and seedphrase functionali
   - Convert between formats (hex, nsec, npub)
   - Validate key pairs
   - Generate new key pairs
-  - Public key derivation
+  - Public key derivation — **32-byte x-only keys per BIP-340** (Nostr identity)
 
 - 📝 **Delegation Support (NIP-26)**
   - Create delegation tokens
@@ -79,12 +89,31 @@ import { seedPhraseToKeyPair } from 'nostr-nsec-seedphrase';
 
 const keyPair = await seedPhraseToKeyPair('your twelve word seed phrase here');
 console.log({
-  privateKey: keyPair.privateKey, // hex format
-  publicKey: keyPair.publicKey,   // hex format
+  privateKey: keyPair.privateKey, // 32-byte private key (hex)
+  publicKey: keyPair.publicKey,   // 32-byte x-only public key (hex, BIP-340)
   nsec: keyPair.nsec,            // bech32 format
   npub: keyPair.npub             // bech32 format
 });
 ```
+
+> **Public keys are 32-byte x-only keys (BIP-340), as required by Nostr.**
+> `getPublicKey`, `seedPhraseToKeyPair`, `fromHex`, and `privateKeyToNpub` all
+> return the 64-hex-char x-only key. If you specifically need the 33-byte SEC1
+> compressed key (for ECDH / non-Nostr interop), use `getCompressedPublicKey`.
+> This changed in v0.8.0 (previously 33-byte compressed) — see CHANGELOG.
+
+> **Seed-phrase derivation is NIP-06 compliant as of v0.8.0.** The private key
+> is derived via the BIP-32 path `m/44'/1237'/0'/0/0` from the BIP39 seed, so
+> the same mnemonic yields the same key in Alby, nos2x, nak, and any other
+> NIP-06 tool (verified against the official NIP-06 spec test vectors).
+> Versions before 0.8.0 used a non-standard `sha256(entropy)` derivation; if
+> you created an identity with an older version, recover it with
+> `seedPhraseToPrivateKeyLegacy` / `seedPhraseToKeyPairLegacy`:
+>
+> ```typescript
+> import { seedPhraseToKeyPairLegacy } from 'nostr-nsec-seedphrase';
+> const oldIdentity = seedPhraseToKeyPairLegacy('your pre-0.8.0 seed phrase');
+> ```
 
 ### Create and Verify Delegations
 

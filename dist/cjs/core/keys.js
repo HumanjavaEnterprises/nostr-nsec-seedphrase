@@ -30,13 +30,32 @@ const logger = (0, pino_1.pino)({
  */
 function getPublicKey(privateKey) {
     try {
-        const pubkey = (0, utils_js_1.bytesToHex)(secp256k1_js_1.secp256k1.getPublicKey((0, utils_js_1.hexToBytes)(privateKey), true));
+        // 32-byte x-only public key (BIP-340 / Nostr identity)
+        const pubkey = (0, utils_js_1.bytesToHex)(secp256k1_js_1.schnorr.getPublicKey((0, utils_js_1.hexToBytes)(privateKey)));
         return pubkey;
     }
     catch (error) {
         logger.error({ error }, "Failed to derive public key");
         throw new Error("Failed to derive public key");
     }
+}
+/**
+ * Builds a multi-format PublicKeyDetails object from a hex private key.
+ * `hex`, `schnorr`, and `npub` are the 32-byte x-only Nostr identity;
+ * `compressed` is the 33-byte SEC1 encoding for non-Nostr interop only.
+ */
+function buildPublicKeyDetails(privateKeyHex) {
+    const privateKeyBytes = (0, utils_js_1.hexToBytes)(privateKeyHex);
+    const xonlyBytes = secp256k1_js_1.schnorr.getPublicKey(privateKeyBytes);
+    const compressedBytes = secp256k1_js_1.secp256k1.getPublicKey(privateKeyBytes, true);
+    privateKeyBytes.fill(0); // zero sensitive material
+    const xonlyHex = (0, utils_js_1.bytesToHex)(xonlyBytes);
+    return {
+        hex: xonlyHex,
+        compressed: compressedBytes,
+        schnorr: xonlyBytes,
+        npub: (0, nip_19_js_1.hexToNpub)(xonlyHex),
+    };
 }
 /**
  * Creates a key pair from a hex private key
@@ -54,14 +73,7 @@ function fromHex(privateKeyHex) {
         if (!privateKeyHex || privateKeyHex.length !== 64) {
             throw new Error("Invalid private key format");
         }
-        const pubkeyHex = getPublicKey(privateKeyHex);
-        const pubkeyBytes = (0, utils_js_1.hexToBytes)(pubkeyHex);
-        const publicKey = {
-            hex: pubkeyHex,
-            compressed: pubkeyBytes,
-            schnorr: pubkeyBytes.slice(1),
-            npub: (0, nip_19_js_1.hexToNpub)(pubkeyHex),
-        };
+        const publicKey = buildPublicKeyDetails(privateKeyHex);
         const nsec = (0, nip_19_js_1.hexToNsec)(privateKeyHex);
         return {
             privateKey: privateKeyHex,
@@ -115,14 +127,7 @@ function seedPhraseToKeyPair(seedPhrase) {
             throw new Error("Invalid seed phrase");
         }
         const privateKey = seedPhraseToPrivateKey(seedPhrase);
-        const pubkeyHex = getPublicKey(privateKey);
-        const pubkeyBytes = (0, utils_js_1.hexToBytes)(pubkeyHex);
-        const publicKey = {
-            hex: pubkeyHex,
-            compressed: pubkeyBytes,
-            schnorr: pubkeyBytes.slice(1),
-            npub: (0, nip_19_js_1.hexToNpub)(pubkeyHex),
-        };
+        const publicKey = buildPublicKeyDetails(privateKey);
         const nsec = (0, nip_19_js_1.hexToNsec)(privateKey);
         return {
             privateKey,

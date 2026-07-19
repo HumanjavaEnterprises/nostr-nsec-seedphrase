@@ -1,4 +1,4 @@
-import { secp256k1 } from "@noble/curves/secp256k1.js";
+import { secp256k1, schnorr } from "@noble/curves/secp256k1.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { pino } from "pino";
@@ -30,14 +30,32 @@ const logger = pino({
  */
 export function getPublicKey(privateKey: string): string {
   try {
-    const pubkey = bytesToHex(
-      secp256k1.getPublicKey(hexToBytes(privateKey), true),
-    );
+    // 32-byte x-only public key (BIP-340 / Nostr identity)
+    const pubkey = bytesToHex(schnorr.getPublicKey(hexToBytes(privateKey)));
     return pubkey;
   } catch (error) {
     logger.error({ error }, "Failed to derive public key");
     throw new Error("Failed to derive public key");
   }
+}
+
+/**
+ * Builds a multi-format PublicKeyDetails object from a hex private key.
+ * `hex`, `schnorr`, and `npub` are the 32-byte x-only Nostr identity;
+ * `compressed` is the 33-byte SEC1 encoding for non-Nostr interop only.
+ */
+function buildPublicKeyDetails(privateKeyHex: string) {
+  const privateKeyBytes = hexToBytes(privateKeyHex);
+  const xonlyBytes = schnorr.getPublicKey(privateKeyBytes);
+  const compressedBytes = secp256k1.getPublicKey(privateKeyBytes, true);
+  privateKeyBytes.fill(0); // zero sensitive material
+  const xonlyHex = bytesToHex(xonlyBytes);
+  return {
+    hex: xonlyHex,
+    compressed: compressedBytes,
+    schnorr: xonlyBytes,
+    npub: hexToNpub(xonlyHex),
+  };
 }
 
 /**
@@ -57,14 +75,7 @@ export function fromHex(privateKeyHex: string): KeyPair {
       throw new Error("Invalid private key format");
     }
 
-    const pubkeyHex = getPublicKey(privateKeyHex);
-    const pubkeyBytes = hexToBytes(pubkeyHex);
-    const publicKey = {
-      hex: pubkeyHex,
-      compressed: pubkeyBytes,
-      schnorr: pubkeyBytes.slice(1),
-      npub: hexToNpub(pubkeyHex),
-    };
+    const publicKey = buildPublicKeyDetails(privateKeyHex);
     const nsec = hexToNsec(privateKeyHex);
 
     return {
@@ -120,14 +131,7 @@ export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
     }
 
     const privateKey = seedPhraseToPrivateKey(seedPhrase);
-    const pubkeyHex = getPublicKey(privateKey);
-    const pubkeyBytes = hexToBytes(pubkeyHex);
-    const publicKey = {
-      hex: pubkeyHex,
-      compressed: pubkeyBytes,
-      schnorr: pubkeyBytes.slice(1),
-      npub: hexToNpub(pubkeyHex),
-    };
+    const publicKey = buildPublicKeyDetails(privateKey);
     const nsec = hexToNsec(privateKey);
 
     return {
