@@ -13,6 +13,14 @@
 
 A focused TypeScript library for Nostr key management and seedphrase functionality, with seamless integration with nostr-crypto-utils. This package specializes in converting between nsec keys and seed phrases, managing delegations, and handling various key formats.
 
+> **Release note — v0.8.0 (staged, pending publish).** Part of the coordinated
+> 2026-07 correctness pass across the Nostr library family. This release makes
+> seed-phrase derivation NIP-06 compliant (BIP-32 `m/44'/1237'/0'/0/0`) and public
+> keys 32-byte x-only per BIP-340, verified against a shared known-answer vector set
+> (including the official NIP-06 spec vectors). Both are **breaking** — see
+> [CHANGELOG.md](CHANGELOG.md). The family dogfoods only its own libraries — no
+> upstream `nostr-tools` dependency.
+
 ## Core Features
 
 - 🌱 **Seedphrase Management**
