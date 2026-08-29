@@ -9,6 +9,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "workerd": "./dist/index.js",
+      "worker": "./dist/index.js",
       "browser": "./dist/browser/nostr-nsec-seedphrase.min.js",
       "import": "./dist/index.js",
       "require": "./dist/cjs/index.js"
