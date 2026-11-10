@@ -1,38 +1,66 @@
 {
   "name": "nostr-nsec-seedphrase",
-  "version": "0.8.0",
-  "description": "A comprehensive TypeScript library for Nostr key management with BIP39 seed phrases, supporting both ESM and CommonJS. Implements NIP-01, NIP-06, NIP-19, and NIP-26 with key generation, event signing, bech32 encoding/decoding, and secure cryptographic operations.",
+  "version": "0.9.0",
+  "description": "TypeScript library for Nostr key management with BIP-39 seed phrases: NIP-06 derivation (account index + optional passphrase), NIP-19 bech32 keys, NIP-01 event signing, NIP-49 ncryptsec. ESM, CommonJS and browser/Workers builds.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "browser": "./dist/browser/nostr-nsec-seedphrase.min.js",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "workerd": "./dist/index.js",
       "worker": "./dist/index.js",
-      "browser": "./dist/browser/nostr-nsec-seedphrase.min.js",
-      "import": "./dist/index.js",
-      "require": "./dist/cjs/index.js"
-    }
+      "browser": "./dist/index.js",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      },
+      "default": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "unpkg": "./dist/browser/nostr-nsec-seedphrase.min.js",
+  "jsdelivr": "./dist/browser/nostr-nsec-seedphrase.min.js",
+  "sideEffects": false,
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/cjs/index.js",
+    "dist/cjs/index.d.ts",
+    "dist/cjs/package.json",
+    "dist/browser/nostr-nsec-seedphrase.min.js",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
   },
   "scripts": {
-    "build": "npm run build:node && npm run build:browser",
-    "build:node": "tsc && tsc -p tsconfig.cjs.json",
+    "build": "npm run clean && npm run build:node && npm run build:browser",
+    "build:node": "tsc && node scripts/build-cjs.mjs",
     "build:browser": "node esbuild.browser.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags",
     "docs": "typedoc --out docs src/index.ts",
-    "docs:serve": "npx serve docs"
+    "docs:serve": "npx serve docs",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "typecheck": "tsc -p tsconfig.eslint.json"
   },
   "repository": {
     "type": "git",
@@ -48,10 +76,12 @@
     "typescript",
     "esm",
     "commonjs",
-    "dual-module",
     "nostr-protocol",
     "key-management",
-    "bech32"
+    "bech32",
+    "nip06",
+    "nip19",
+    "bip32"
   ],
   "author": "vveerrgg",
   "license": "MIT",
@@ -63,32 +93,28 @@
     "@noble/curves": "^2.0.1",
     "@noble/hashes": "^2.0.1",
     "@scure/bip32": "^2.2.0",
+    "@scure/bip39": "~2.2.0",
     "bech32": "^2.0.0",
-    "bip39": "^3.1.0",
-    "nostr-crypto-utils": "^0.9.1",
-    "pino": "^10.3.1"
+    "nostr-crypto-utils": "^0.9.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.20.1",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.12",
     "esbuild": "^0.28.1",
     "eslint": "^10.7.0",
     "prettier": "^3.9.6",
     "typedoc": "^0.28.20",
     "typedoc-plugin-markdown": "^4.12.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.12"
   },
-  "files": [
-    "dist",
-    "examples/**/*",
-    "README.md",
-    "LICENSE"
-  ],
   "publishConfig": {
     "access": "public"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }

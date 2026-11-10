@@ -85,8 +85,36 @@ export declare function validateSeedPhrase(seedPhrase: string): boolean;
  */
 export declare const NIP06_DERIVATION_PATH = "m/44'/1237'/0'/0/0";
 /**
+ * Options for NIP-06 derivation from a seed phrase.
+ */
+export interface SeedPhraseOptions {
+    /**
+     * NIP-06 account index: the hardened `<account>` in
+     * `m/44'/1237'/<account>'/0/0`. Integer from 0 to 2^31 - 1. Default 0.
+     */
+    account?: number;
+    /**
+     * Optional BIP-39 passphrase (the "25th word"). Default "" (none).
+     * NFKD-normalised per BIP-39.
+     */
+    passphrase?: string;
+}
+/**
+ * Returns the NIP-06 derivation path for an account index:
+ * `m/44'/1237'/<account>'/0/0`.
+ * @param {number} [account=0] - Integer from 0 to 2^31 - 1
+ * @returns {string} The BIP-32 derivation path
+ * @throws {Error} If the account index is not a valid hardened index
+ * @example
+ * getNip06DerivationPath(1); // "m/44'/1237'/1'/0/0"
+ */
+export declare function getNip06DerivationPath(account?: number): string;
+/**
  * Converts a BIP39 seed phrase to a Nostr key pair using the standard
- * NIP-06 derivation (BIP32 path `m/44'/1237'/0'/0/0`).
+ * NIP-06 derivation (BIP32 path `m/44'/1237'/<account>'/0/0`).
+ *
+ * With no options the result is account 0 with no BIP-39 passphrase, exactly
+ * as in earlier versions.
  *
  * NOTE (v0.8.0 BREAKING): prior versions derived the private key as
  * `sha256(bip39-entropy)`, which is NOT NIP-06 and does not interoperate
@@ -95,16 +123,19 @@ export declare const NIP06_DERIVATION_PATH = "m/44'/1237'/0'/0/0";
  * {@link seedPhraseToPrivateKeyLegacy}.
  *
  * @param {string} seedPhrase - The BIP39 seed phrase to convert
+ * @param {SeedPhraseOptions} [options] - `account` (default 0) and `passphrase` (default "")
  * @returns {KeyPair} A key pair containing private and public keys in various formats
  * @throws {Error} If the seed phrase is invalid or key generation fails
  * @example
  * const keyPair = seedPhraseToKeyPair("witch collapse practice feed shame open despair creek road again ice least");
+ * const second = seedPhraseToKeyPair(phrase, { account: 1 });
+ * const withPassphrase = seedPhraseToKeyPair(phrase, { passphrase: "extra words" });
  * console.log(keyPair.privateKey); // hex private key
  * console.log(keyPair.publicKey);  // hex public key
  * console.log(keyPair.nsec);       // bech32 nsec private key
  * console.log(keyPair.npub);       // bech32 npub public key
  */
-export declare function seedPhraseToKeyPair(seedPhrase: string): KeyPair;
+export declare function seedPhraseToKeyPair(seedPhrase: string, options?: SeedPhraseOptions | null): KeyPair;
 /**
  * LEGACY (pre-0.8.0) derivation: converts a BIP39 seed phrase to a private
  * key as `sha256(bip39-entropy)`.
@@ -175,51 +206,61 @@ export declare function getPublicKey(privateKey: string): string;
  */
 export declare function getCompressedPublicKey(privateKey: string): string;
 /**
- * NIP-19 encoding and decoding functions
+ * NIP-19 encoding and decoding functions for bare keys and event ids.
+ * Every encoder and decoder requires exactly 32 bytes; nsec values must also
+ * be a valid secp256k1 secret key (0 < d < n).
  * @namespace
  */
 export declare const nip19: {
     /**
      * Encodes a public key into npub format
-     * @param {string} pubkey - The hex-encoded public key
+     * @param {string} pubkey - The hex-encoded 32-byte x-only public key
      * @returns {string} The bech32-encoded npub string
+     * @throws {Error} If the key is not exactly 32 bytes of hex
      */
     npubEncode(pubkey: string): string;
     /**
      * Decodes an npub string to hex format
      * @param {string} npub - The bech32-encoded npub string
      * @returns {string} The hex-encoded public key
+     * @throws {Error} If the prefix is wrong or the payload is not 32 bytes
      */
     npubDecode(npub: string): string;
     /**
      * Encodes a private key into nsec format
-     * @param {string} privkey - The hex-encoded private key
+     * @param {string} privkey - The hex-encoded 32-byte private key
      * @returns {string} The bech32-encoded nsec string
+     * @throws {Error} If the key is not 32 bytes or not in the range 0 < d < n
      */
     nsecEncode(privkey: string): string;
     /**
      * Decodes an nsec string to hex format
      * @param {string} nsec - The bech32-encoded nsec string
      * @returns {string} The hex-encoded private key
+     * @throws {Error} If the prefix is wrong, the payload is not 32 bytes, or
+     *   the key is not in the range 0 < d < n
      */
     nsecDecode(nsec: string): string;
     /**
      * Encodes an event ID into note format
-     * @param {string} eventId - The hex-encoded event ID
+     * @param {string} eventId - The hex-encoded 32-byte event ID
      * @returns {string} The bech32-encoded note string
+     * @throws {Error} If the id is not exactly 32 bytes of hex
      */
     noteEncode(eventId: string): string;
     /**
      * Decodes a note string to hex format
      * @param {string} note - The bech32-encoded note string
      * @returns {string} The hex-encoded event ID
+     * @throws {Error} If the prefix is wrong or the payload is not 32 bytes
      */
     noteDecode(note: string): string;
     /**
-     * Decodes any bech32-encoded Nostr entity
+     * Decodes any bech32-encoded Nostr entity without checking its prefix or
+     * length. Prefer the typed decoders above, which validate both.
      * @param {string} bech32str - The bech32-encoded string
      * @returns {{ type: string; data: Uint8Array }} Object containing the decoded type and data
-     * @property {string} type - The type of the decoded entity (npub, nsec, or note)
+     * @property {string} type - The bech32 prefix (e.g. npub, nsec, note)
      * @property {Uint8Array} data - The raw decoded data
      */
     decode(bech32str: string): {
@@ -279,17 +320,18 @@ export declare function configureHMAC(): void;
 export declare function createEvent(content: string, kind: number, privateKey: string, tags?: string[][]): Promise<NostrEvent>;
 /**
  * Converts a BIP39 seed phrase to a private key using the standard NIP-06
- * derivation (BIP32 path `m/44'/1237'/0'/0/0`). Interoperable with Alby,
+ * derivation (BIP32 path `m/44'/1237'/<account>'/0/0`). Interoperable with Alby,
  * nos2x, nak, and other NIP-06 tooling. For identities created before
  * v0.8.0 see {@link seedPhraseToPrivateKeyLegacy}.
  * @param {string} seedPhrase - The BIP39 seed phrase to convert
+ * @param {SeedPhraseOptions} [options] - `account` (default 0) and `passphrase` (default "")
  * @returns {string} The hex-encoded private key
  * @throws {Error} If the seed phrase is invalid
  * @example
  * const privateKey = seedPhraseToPrivateKey("witch collapse practice feed shame open despair creek road again ice least");
  * console.log(privateKey); // hex private key
  */
-export declare function seedPhraseToPrivateKey(seedPhrase: string): string;
+export declare function seedPhraseToPrivateKey(seedPhrase: string, options?: SeedPhraseOptions | null): string;
 /**
  * Converts a private key to bech32 nsec format
  * @param {string} privateKey - The hex-encoded private key
@@ -388,7 +430,7 @@ export declare function nsecToPrivateKey(nsec: string): string;
  * @param {string} password - The password to encrypt with
  * @param {number} [logn=16] - Scrypt log2(N) parameter (higher = slower but more secure)
  * @returns {string} The bech32-encoded ncryptsec string
- * @throws {Error} If encryption fails
+ * @throws {Error} If the key is not 32 bytes with 0 < d < n, or encryption fails
  * @example
  * const ncryptsec = toNcryptsec("1234567890abcdef...", "my-strong-password");
  * console.log(ncryptsec); // "ncryptsec1..."

@@ -27,13 +27,11 @@ import {
   configureHMAC,
   fromHex,
   nip19,
-} from "../index.js";
+} from "../src/index.js";
 
 const vectors = JSON.parse(
   readFileSync(
-    fileURLToPath(
-      new URL("../../test/vectors/nostr-vectors.json", import.meta.url),
-    ),
+    fileURLToPath(new URL("./vectors/nostr-vectors.json", import.meta.url)),
     "utf-8",
   ),
 );
@@ -87,7 +85,6 @@ describe("nostr-nsec-seedphrase", () => {
     it("privateKeyToNpub yields the x-only npub", () => {
       expect(privateKeyToNpub(alice.privateKey)).toBe(alice.npub);
     });
-
   });
 
   describe("Known-answer: NIP-06 seed phrase derivation (official spec vectors)", () => {
@@ -154,9 +151,9 @@ describe("nostr-nsec-seedphrase", () => {
 
     it("fails verification for the wrong message", async () => {
       const sig = await signMessage("Hello, Nostr!", alice.privateKey);
-      expect(await verifySignature("Wrong message", sig, alice.xonlyPubkey)).toBe(
-        false,
-      );
+      expect(
+        await verifySignature("Wrong message", sig, alice.xonlyPubkey),
+      ).toBe(false);
     });
   });
 

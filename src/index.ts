@@ -1,17 +1,24 @@
 import {
-  generateMnemonic,
-  validateMnemonic,
-  mnemonicToEntropy,
+  generateMnemonic as scureGenerateMnemonic,
+  validateMnemonic as scureValidateMnemonic,
+  mnemonicToEntropy as scureMnemonicToEntropy,
   mnemonicToSeedSync,
-} from "bip39";
+} from "@scure/bip39";
+import { wordlist as english } from "@scure/bip39/wordlists/english.js";
 import { HDKey } from "@scure/bip32";
 import { secp256k1, schnorr } from "@noble/curves/secp256k1.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { hmac } from "@noble/hashes/hmac.js";
 import { bech32 } from "bech32";
-import { nip49 } from "nostr-crypto-utils";
-import { logger } from "./utils/logger.js";
+import {
+  encrypt as nip49Encrypt,
+  decrypt as nip49Decrypt,
+} from "nostr-crypto-utils/nip49";
+
+const generateMnemonic = (): string => scureGenerateMnemonic(english, 128);
+const validateMnemonic = (m: string): boolean =>
+  scureValidateMnemonic(m, english);
 
 /**
  * Represents a Nostr key pair with associated formats
@@ -93,9 +100,7 @@ export function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array {
   if (!validateMnemonic(seedPhrase)) {
     throw new Error("Invalid seed phrase");
   }
-  // bip39.mnemonicToEntropy returns a hex string, convert it to Uint8Array
-  const entropyHex = mnemonicToEntropy(seedPhrase);
-  return hexToBytes(entropyHex);
+  return scureMnemonicToEntropy(seedPhrase, english);
 }
 
 /**
@@ -107,11 +112,7 @@ export function getEntropyFromSeedPhrase(seedPhrase: string): Uint8Array {
  * console.log(isValid); // true
  */
 export function validateSeedPhrase(seedPhrase: string): boolean {
-  logger.log("Validating seed phrase");
-  logger.log("Input being validated");
-  const isValid = validateMnemonic(seedPhrase);
-  logger.log({ isValid }, "Validated seed phrase");
-  return Boolean(isValid);
+  return validateMnemonic(seedPhrase);
 }
 
 /**
@@ -122,23 +123,72 @@ export function validateSeedPhrase(seedPhrase: string): boolean {
 export const NIP06_DERIVATION_PATH = "m/44'/1237'/0'/0/0";
 
 /**
+ * Options for NIP-06 derivation from a seed phrase.
+ */
+export interface SeedPhraseOptions {
+  /**
+   * NIP-06 account index: the hardened `<account>` in
+   * `m/44'/1237'/<account>'/0/0`. Integer from 0 to 2^31 - 1. Default 0.
+   */
+  account?: number;
+  /**
+   * Optional BIP-39 passphrase (the "25th word"). Default "" (none).
+   * NFKD-normalised per BIP-39.
+   */
+  passphrase?: string;
+}
+
+/**
+ * Returns the NIP-06 derivation path for an account index:
+ * `m/44'/1237'/<account>'/0/0`.
+ * @param {number} [account=0] - Integer from 0 to 2^31 - 1
+ * @returns {string} The BIP-32 derivation path
+ * @throws {Error} If the account index is not a valid hardened index
+ * @example
+ * getNip06DerivationPath(1); // "m/44'/1237'/1'/0/0"
+ */
+export function getNip06DerivationPath(account: number = 0): string {
+  if (!Number.isInteger(account) || account < 0 || account > 0x7fffffff) {
+    throw new Error(
+      "Invalid account index: must be an integer from 0 to 2147483647",
+    );
+  }
+  return `m/44'/1237'/${account}'/0/0`;
+}
+
+/**
  * Derives a Nostr private key from a BIP39 seed phrase per NIP-06:
- * BIP39 seed -> BIP32 master key -> derive `m/44'/1237'/0'/0/0`.
+ * BIP39 seed -> BIP32 master key -> derive `m/44'/1237'/<account>'/0/0`.
  *
  * This is the interoperable standard derivation used across the Nostr
  * ecosystem (Alby, nos2x, nak, ...): the same mnemonic produces the same
  * key everywhere.
  *
  * @param {string} seedPhrase - A valid BIP39 mnemonic
+ * @param {SeedPhraseOptions} [options] - Account index and BIP-39 passphrase
  * @returns {string} The hex-encoded 32-byte private key
- * @throws {Error} If the seed phrase is invalid or derivation fails
+ * @throws {Error} If the seed phrase or account is invalid, or derivation fails
  */
-function deriveNip06PrivateKey(seedPhrase: string): string {
+function deriveNip06PrivateKey(
+  seedPhrase: string,
+  options?: SeedPhraseOptions | null,
+): string {
+  if (options == null) options = {};
+  if (typeof options !== "object" || Array.isArray(options)) {
+    throw new TypeError(
+      "Invalid options: expected an object like { account, passphrase }",
+    );
+  }
+  const { account = 0, passphrase = "" } = options;
+  const path = getNip06DerivationPath(account);
+  if (typeof passphrase !== "string") {
+    throw new Error("Invalid passphrase: must be a string");
+  }
   if (!validateMnemonic(seedPhrase)) {
     throw new Error("Invalid seed phrase");
   }
-  const seed = mnemonicToSeedSync(seedPhrase); // 64-byte BIP39 seed
-  const child = HDKey.fromMasterSeed(seed).derive(NIP06_DERIVATION_PATH);
+  const seed = mnemonicToSeedSync(seedPhrase, passphrase); // 64-byte BIP39 seed
+  const child = HDKey.fromMasterSeed(seed).derive(path);
   seed.fill(0); // zero sensitive material
   if (!child.privateKey || child.privateKey.length !== 32) {
     throw new Error("Failed to derive NIP-06 private key");
@@ -150,7 +200,10 @@ function deriveNip06PrivateKey(seedPhrase: string): string {
 
 /**
  * Converts a BIP39 seed phrase to a Nostr key pair using the standard
- * NIP-06 derivation (BIP32 path `m/44'/1237'/0'/0/0`).
+ * NIP-06 derivation (BIP32 path `m/44'/1237'/<account>'/0/0`).
+ *
+ * With no options the result is account 0 with no BIP-39 passphrase, exactly
+ * as in earlier versions.
  *
  * NOTE (v0.8.0 BREAKING): prior versions derived the private key as
  * `sha256(bip39-entropy)`, which is NOT NIP-06 and does not interoperate
@@ -159,41 +212,39 @@ function deriveNip06PrivateKey(seedPhrase: string): string {
  * {@link seedPhraseToPrivateKeyLegacy}.
  *
  * @param {string} seedPhrase - The BIP39 seed phrase to convert
+ * @param {SeedPhraseOptions} [options] - `account` (default 0) and `passphrase` (default "")
  * @returns {KeyPair} A key pair containing private and public keys in various formats
  * @throws {Error} If the seed phrase is invalid or key generation fails
  * @example
  * const keyPair = seedPhraseToKeyPair("witch collapse practice feed shame open despair creek road again ice least");
+ * const second = seedPhraseToKeyPair(phrase, { account: 1 });
+ * const withPassphrase = seedPhraseToKeyPair(phrase, { passphrase: "extra words" });
  * console.log(keyPair.privateKey); // hex private key
  * console.log(keyPair.publicKey);  // hex public key
  * console.log(keyPair.nsec);       // bech32 nsec private key
  * console.log(keyPair.npub);       // bech32 npub public key
  */
-export function seedPhraseToKeyPair(seedPhrase: string): KeyPair {
-  try {
-    const privateKeyHex = deriveNip06PrivateKey(seedPhrase);
+export function seedPhraseToKeyPair(
+  seedPhrase: string,
+  options?: SeedPhraseOptions | null,
+): KeyPair {
+  const privateKeyHex = deriveNip06PrivateKey(seedPhrase, options);
 
-    // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
-    const publicKeyBytes = schnorr.getPublicKey(hexToBytes(privateKeyHex));
-    const publicKey = bytesToHex(publicKeyBytes);
+  // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
+  const publicKeyBytes = schnorr.getPublicKey(hexToBytes(privateKeyHex));
+  const publicKey = bytesToHex(publicKeyBytes);
 
-    // Generate the nsec and npub formats
-    const nsec = nip19.nsecEncode(privateKeyHex);
-    const npub = nip19.npubEncode(publicKey);
+  // Generate the nsec and npub formats
+  const nsec = nip19.nsecEncode(privateKeyHex);
+  const npub = nip19.npubEncode(publicKey);
 
-    return {
-      privateKey: privateKeyHex,
-      publicKey,
-      nsec,
-      npub,
-      seedPhrase,
-    };
-  } catch (error) {
-    logger.error(
-      "Failed to create key pair from seed phrase:",
-      error?.toString(),
-    );
-    throw error;
-  }
+  return {
+    privateKey: privateKeyHex,
+    publicKey,
+    nsec,
+    npub,
+    seedPhrase,
+  };
 }
 
 /**
@@ -229,26 +280,18 @@ export function seedPhraseToPrivateKeyLegacy(seedPhrase: string): string {
  * @throws {Error} If the seed phrase is invalid
  */
 export function seedPhraseToKeyPairLegacy(seedPhrase: string): KeyPair {
-  try {
-    const privateKeyHex = seedPhraseToPrivateKeyLegacy(seedPhrase);
+  const privateKeyHex = seedPhraseToPrivateKeyLegacy(seedPhrase);
 
-    const publicKeyBytes = schnorr.getPublicKey(hexToBytes(privateKeyHex));
-    const publicKey = bytesToHex(publicKeyBytes);
+  const publicKeyBytes = schnorr.getPublicKey(hexToBytes(privateKeyHex));
+  const publicKey = bytesToHex(publicKeyBytes);
 
-    return {
-      privateKey: privateKeyHex,
-      publicKey,
-      nsec: nip19.nsecEncode(privateKeyHex),
-      npub: nip19.npubEncode(publicKey),
-      seedPhrase,
-    };
-  } catch (error) {
-    logger.error(
-      "Failed to create legacy key pair from seed phrase:",
-      error?.toString(),
-    );
-    throw error;
-  }
+  return {
+    privateKey: privateKeyHex,
+    publicKey,
+    nsec: nip19.nsecEncode(privateKeyHex),
+    npub: nip19.npubEncode(publicKey),
+    seedPhrase,
+  };
 }
 
 /**
@@ -277,34 +320,29 @@ export function generateKeyPairWithSeed(): KeyPair {
  * console.log(keyPair.npub);      // bech32 npub public key
  */
 export function fromHex(privateKeyHex: string): KeyPair {
-  try {
-    // Validate the private key
-    const privateKeyBytes = hexToBytes(privateKeyHex);
-    if (!secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
-      privateKeyBytes.fill(0); // zero sensitive material
-      throw new Error("Invalid private key");
-    }
-
-    // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
-    const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
+  // Validate the private key
+  const privateKeyBytes = hexToBytes(privateKeyHex);
+  if (!secp256k1.utils.isValidSecretKey(privateKeyBytes)) {
     privateKeyBytes.fill(0); // zero sensitive material
-    const publicKey = bytesToHex(publicKeyBytes);
-
-    // Generate the nsec and npub formats
-    const nsec = nip19.nsecEncode(privateKeyHex);
-    const npub = nip19.npubEncode(publicKey);
-
-    return {
-      privateKey: privateKeyHex,
-      publicKey,
-      nsec,
-      npub,
-      seedPhrase: "", // No seed phrase for hex-imported keys
-    };
-  } catch (error) {
-    logger.error("Failed to create key pair from hex:", error?.toString());
-    throw error;
+    throw new Error("Invalid private key");
   }
+
+  // Derive the public key as a 32-byte x-only key (BIP-340 / Nostr)
+  const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
+  privateKeyBytes.fill(0); // zero sensitive material
+  const publicKey = bytesToHex(publicKeyBytes);
+
+  // Generate the nsec and npub formats
+  const nsec = nip19.nsecEncode(privateKeyHex);
+  const npub = nip19.npubEncode(publicKey);
+
+  return {
+    privateKey: privateKeyHex,
+    publicKey,
+    nsec,
+    npub,
+    seedPhrase: "", // No seed phrase for hex-imported keys
+  };
 }
 
 /**
@@ -316,16 +354,11 @@ export function fromHex(privateKeyHex: string): KeyPair {
  * console.log(pubkey); // hex public key
  */
 export function getPublicKey(privateKey: string): string {
-  try {
-    const privateKeyBytes = hexToBytes(privateKey);
-    // 32-byte x-only public key (BIP-340 / Nostr identity)
-    const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
-    privateKeyBytes.fill(0); // zero sensitive material
-    return bytesToHex(publicKeyBytes);
-  } catch (error) {
-    logger.error("Failed to get public key:", error?.toString());
-    throw error;
-  }
+  const privateKeyBytes = hexToBytes(privateKey);
+  // 32-byte x-only public key (BIP-340 / Nostr identity)
+  const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
+  privateKeyBytes.fill(0); // zero sensitive material
+  return bytesToHex(publicKeyBytes);
 }
 
 /**
@@ -341,118 +374,142 @@ export function getPublicKey(privateKey: string): string {
  * @returns {string} The 66-hex-char (33-byte) compressed public key
  */
 export function getCompressedPublicKey(privateKey: string): string {
-  try {
-    const privateKeyBytes = hexToBytes(privateKey);
-    const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true);
-    privateKeyBytes.fill(0); // zero sensitive material
-    return bytesToHex(publicKeyBytes);
-  } catch (error) {
-    logger.error("Failed to get compressed public key:", error?.toString());
-    throw error;
+  const privateKeyBytes = hexToBytes(privateKey);
+  const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true);
+  privateKeyBytes.fill(0); // zero sensitive material
+  return bytesToHex(publicKeyBytes);
+}
+
+/**
+ * Encodes exactly 32 bytes of hex under a bech32 prefix (NIP-19 bare keys and ids).
+ */
+function encode32(prefix: string, hex: string, what: string): string {
+  const data = hexToBytes(hex);
+  if (data.length !== 32) {
+    throw new Error(
+      `Invalid ${what}: ${prefix} requires exactly 32 bytes, got ${data.length}`,
+    );
+  }
+  return bech32.encode(prefix, bech32.toWords(data), 1000);
+}
+
+/**
+ * Decodes a bech32 string, checks its prefix, and requires a 32-byte payload.
+ */
+function decode32(prefix: string, str: string): Uint8Array {
+  const { prefix: got, words } = bech32.decode(str, 1000);
+  if (got !== prefix) throw new Error(`Invalid ${prefix}: wrong prefix`);
+  const data = Uint8Array.from(bech32.fromWords(words));
+  if (data.length !== 32) {
+    throw new Error(
+      `Invalid ${prefix}: expected a 32-byte payload, got ${data.length} bytes`,
+    );
+  }
+  return data;
+}
+
+/**
+ * Throws unless the bytes are a valid secp256k1 secret key (0 < d < n).
+ */
+function assertValidSecretKey(data: Uint8Array): void {
+  if (!secp256k1.utils.isValidSecretKey(data)) {
+    throw new Error("Invalid private key: must be 32 bytes with 0 < d < n");
   }
 }
 
 /**
- * NIP-19 encoding and decoding functions
+ * NIP-19 encoding and decoding functions for bare keys and event ids.
+ * Every encoder and decoder requires exactly 32 bytes; nsec values must also
+ * be a valid secp256k1 secret key (0 < d < n).
  * @namespace
  */
 export const nip19 = {
   /**
    * Encodes a public key into npub format
-   * @param {string} pubkey - The hex-encoded public key
+   * @param {string} pubkey - The hex-encoded 32-byte x-only public key
    * @returns {string} The bech32-encoded npub string
+   * @throws {Error} If the key is not exactly 32 bytes of hex
    */
   npubEncode(pubkey: string): string {
-    const data = hexToBytes(pubkey);
     // Nostr npubs are 32-byte x-only public keys (BIP-340). Reject anything
     // else (e.g. a 33-byte compressed key) so it can never be silently encoded.
-    if (data.length !== 32) {
-      throw new Error(
-        `Invalid public key: npub requires a 32-byte x-only key, got ${data.length} bytes`,
-      );
-    }
-    const words = bech32.toWords(Uint8Array.from(data));
-    return bech32.encode("npub", words, 1000);
+    return encode32("npub", pubkey, "public key");
   },
 
   /**
    * Decodes an npub string to hex format
    * @param {string} npub - The bech32-encoded npub string
    * @returns {string} The hex-encoded public key
+   * @throws {Error} If the prefix is wrong or the payload is not 32 bytes
    */
   npubDecode(npub: string): string {
-    const { prefix, words } = bech32.decode(npub, 1000);
-    if (prefix !== "npub") throw new Error("Invalid npub: wrong prefix");
-    const data = bech32.fromWords(words);
-    return bytesToHex(
-      data instanceof Uint8Array ? data : Uint8Array.from(data),
-    );
+    return bytesToHex(decode32("npub", npub));
   },
 
   /**
    * Encodes a private key into nsec format
-   * @param {string} privkey - The hex-encoded private key
+   * @param {string} privkey - The hex-encoded 32-byte private key
    * @returns {string} The bech32-encoded nsec string
+   * @throws {Error} If the key is not 32 bytes or not in the range 0 < d < n
    */
   nsecEncode(privkey: string): string {
     const data = hexToBytes(privkey);
-    const words = bech32.toWords(Uint8Array.from(data));
-    return bech32.encode("nsec", words, 1000);
+    try {
+      assertValidSecretKey(data);
+      return bech32.encode("nsec", bech32.toWords(data), 1000);
+    } finally {
+      data.fill(0); // zero sensitive material
+    }
   },
 
   /**
    * Decodes an nsec string to hex format
    * @param {string} nsec - The bech32-encoded nsec string
    * @returns {string} The hex-encoded private key
+   * @throws {Error} If the prefix is wrong, the payload is not 32 bytes, or
+   *   the key is not in the range 0 < d < n
    */
   nsecDecode(nsec: string): string {
-    const { prefix, words } = bech32.decode(nsec, 1000);
-    if (prefix !== "nsec") throw new Error("Invalid nsec: wrong prefix");
-    const data = bech32.fromWords(words);
-    return bytesToHex(
-      data instanceof Uint8Array ? data : Uint8Array.from(data),
-    );
+    const data = decode32("nsec", nsec);
+    try {
+      assertValidSecretKey(data);
+      return bytesToHex(data);
+    } finally {
+      data.fill(0); // zero sensitive material
+    }
   },
 
   /**
    * Encodes an event ID into note format
-   * @param {string} eventId - The hex-encoded event ID
+   * @param {string} eventId - The hex-encoded 32-byte event ID
    * @returns {string} The bech32-encoded note string
+   * @throws {Error} If the id is not exactly 32 bytes of hex
    */
   noteEncode(eventId: string): string {
-    const data = hexToBytes(eventId);
-    const words = bech32.toWords(Uint8Array.from(data));
-    return bech32.encode("note", words, 1000);
+    return encode32("note", eventId, "event id");
   },
 
   /**
    * Decodes a note string to hex format
    * @param {string} note - The bech32-encoded note string
    * @returns {string} The hex-encoded event ID
+   * @throws {Error} If the prefix is wrong or the payload is not 32 bytes
    */
   noteDecode(note: string): string {
-    const { prefix, words } = bech32.decode(note, 1000);
-    if (prefix !== "note") throw new Error("Invalid note: wrong prefix");
-    const data = bech32.fromWords(words);
-    return bytesToHex(
-      data instanceof Uint8Array ? data : Uint8Array.from(data),
-    );
+    return bytesToHex(decode32("note", note));
   },
 
   /**
-   * Decodes any bech32-encoded Nostr entity
+   * Decodes any bech32-encoded Nostr entity without checking its prefix or
+   * length. Prefer the typed decoders above, which validate both.
    * @param {string} bech32str - The bech32-encoded string
    * @returns {{ type: string; data: Uint8Array }} Object containing the decoded type and data
-   * @property {string} type - The type of the decoded entity (npub, nsec, or note)
+   * @property {string} type - The bech32 prefix (e.g. npub, nsec, note)
    * @property {Uint8Array} data - The raw decoded data
    */
   decode(bech32str: string): { type: string; data: Uint8Array } {
     const { prefix, words } = bech32.decode(bech32str, 1000);
-    const data = bech32.fromWords(words);
-    return {
-      type: prefix,
-      data: data instanceof Uint8Array ? data : Uint8Array.from(data),
-    };
+    return { type: prefix, data: Uint8Array.from(bech32.fromWords(words)) };
   },
 };
 
@@ -492,17 +549,11 @@ export async function signEvent(
   event: UnsignedEvent,
   privateKey: string,
 ): Promise<string> {
-  try {
-    const eventHash = getEventHash(event);
-    const privateKeyBytes = hexToBytes(privateKey);
-    const signature = schnorr.sign(hexToBytes(eventHash), privateKeyBytes);
-    privateKeyBytes.fill(0); // zero sensitive material
-    logger.log("Event signed successfully");
-    return bytesToHex(signature);
-  } catch (error) {
-    logger.error("Failed to sign event:", error?.toString());
-    throw error;
-  }
+  const eventHash = getEventHash(event);
+  const privateKeyBytes = hexToBytes(privateKey);
+  const signature = schnorr.sign(hexToBytes(eventHash), privateKeyBytes);
+  privateKeyBytes.fill(0); // zero sensitive material
+  return bytesToHex(signature);
 }
 
 /**
@@ -514,28 +565,20 @@ export async function signEvent(
  * console.log(isValid); // true or false
  */
 export async function verifyEvent(event: NostrEvent): Promise<boolean> {
-  try {
-    if (!event.id || !event.pubkey || !event.sig) {
-      logger.log("Invalid event: missing required fields");
-      return false;
-    }
-
-    const hash = getEventHash(event);
-    if (hash !== event.id) {
-      logger.log("Event hash mismatch");
-      return false;
-    }
-
-    logger.log("Verifying event signature");
-    return schnorr.verify(
-      hexToBytes(event.sig),
-      hexToBytes(hash),
-      hexToBytes(event.pubkey),
-    );
-  } catch (error) {
-    logger.error("Failed to verify event:", error?.toString());
-    throw error;
+  if (!event.id || !event.pubkey || !event.sig) {
+    return false;
   }
+
+  const hash = getEventHash(event);
+  if (hash !== event.id) {
+    return false;
+  }
+
+  return schnorr.verify(
+    hexToBytes(event.sig),
+    hexToBytes(hash),
+    hexToBytes(event.pubkey),
+  );
 }
 
 /**
@@ -570,13 +613,7 @@ export function configureHMAC(): void {
   ) {
     (secp256k1 as any).utils.hmacSha256 = hmacFunction;
     (secp256k1 as any).utils.hmacSha256Sync = hmacSyncFunction;
-  } else {
-    logger.log(
-      "secp256k1.utils.hmacSha256Sync not found; HMAC configuration skipped (library may handle HMAC internally)",
-    );
   }
-
-  logger.log("Configured HMAC for secp256k1");
 }
 
 /**
@@ -615,7 +652,6 @@ export async function createEvent(
   const id = getEventHash(event);
   const sig = await signEvent(event, privateKey);
 
-  logger.log("Created new Nostr event");
   return {
     ...event,
     id,
@@ -625,18 +661,22 @@ export async function createEvent(
 
 /**
  * Converts a BIP39 seed phrase to a private key using the standard NIP-06
- * derivation (BIP32 path `m/44'/1237'/0'/0/0`). Interoperable with Alby,
+ * derivation (BIP32 path `m/44'/1237'/<account>'/0/0`). Interoperable with Alby,
  * nos2x, nak, and other NIP-06 tooling. For identities created before
  * v0.8.0 see {@link seedPhraseToPrivateKeyLegacy}.
  * @param {string} seedPhrase - The BIP39 seed phrase to convert
+ * @param {SeedPhraseOptions} [options] - `account` (default 0) and `passphrase` (default "")
  * @returns {string} The hex-encoded private key
  * @throws {Error} If the seed phrase is invalid
  * @example
  * const privateKey = seedPhraseToPrivateKey("witch collapse practice feed shame open despair creek road again ice least");
  * console.log(privateKey); // hex private key
  */
-export function seedPhraseToPrivateKey(seedPhrase: string): string {
-  return seedPhraseToKeyPair(seedPhrase).privateKey;
+export function seedPhraseToPrivateKey(
+  seedPhrase: string,
+  options?: SeedPhraseOptions | null,
+): string {
+  return seedPhraseToKeyPair(seedPhrase, options).privateKey;
 }
 
 /**
@@ -649,12 +689,7 @@ export function seedPhraseToPrivateKey(seedPhrase: string): string {
  * console.log(nsec); // "nsec1..."
  */
 export function privateKeyToNsec(privateKey: string): string {
-  try {
-    return nip19.nsecEncode(privateKey);
-  } catch (error) {
-    logger.error("Failed to encode nsec:", error?.toString());
-    throw error;
-  }
+  return nip19.nsecEncode(privateKey);
 }
 
 /**
@@ -667,16 +702,11 @@ export function privateKeyToNsec(privateKey: string): string {
  * console.log(npub); // "npub1..."
  */
 export function privateKeyToNpub(privateKey: string): string {
-  try {
-    const privateKeyBytes = hexToBytes(privateKey);
-    // 32-byte x-only public key (BIP-340 / Nostr identity)
-    const publicKey = schnorr.getPublicKey(privateKeyBytes);
-    privateKeyBytes.fill(0); // zero sensitive material
-    return nip19.npubEncode(bytesToHex(publicKey));
-  } catch (error) {
-    logger.error("Failed to encode npub:", error?.toString());
-    throw error;
-  }
+  const privateKeyBytes = hexToBytes(privateKey);
+  // 32-byte x-only public key (BIP-340 / Nostr identity)
+  const publicKey = schnorr.getPublicKey(privateKeyBytes);
+  privateKeyBytes.fill(0); // zero sensitive material
+  return nip19.npubEncode(bytesToHex(publicKey));
 }
 
 /**
@@ -689,14 +719,8 @@ export function privateKeyToNpub(privateKey: string): string {
  * console.log(hex); // "1234567890abcdef..."
  */
 export function nsecToHex(nsec: string): string {
-  try {
-    const hexPrivateKey = nip19.nsecDecode(nsec);
-    logger.log("Converted nsec to hex");
-    return hexPrivateKey;
-  } catch (error) {
-    logger.error("Failed to decode nsec:", error?.toString());
-    throw error;
-  }
+  const hexPrivateKey = nip19.nsecDecode(nsec);
+  return hexPrivateKey;
 }
 
 /**
@@ -709,17 +733,7 @@ export function nsecToHex(nsec: string): string {
  * console.log(hex); // "1234567890abcdef..."
  */
 export function npubToHex(npub: string): string {
-  try {
-    const { type, data } = nip19.decode(npub);
-    if (type !== "npub") {
-      throw new Error("Invalid npub format");
-    }
-    logger.log("Converted npub to hex");
-    return bytesToHex(data);
-  } catch (error) {
-    logger.error("Failed to decode npub:", error?.toString());
-    throw error;
-  }
+  return nip19.npubDecode(npub);
 }
 
 /**
@@ -732,13 +746,7 @@ export function npubToHex(npub: string): string {
  * console.log(npub); // "npub1..."
  */
 export function hexToNpub(publicKeyHex: string): string {
-  try {
-    logger.log("Converting hex to npub");
-    return nip19.npubEncode(publicKeyHex);
-  } catch (error) {
-    logger.error("Failed to encode npub:", error?.toString());
-    throw error;
-  }
+  return nip19.npubEncode(publicKeyHex);
 }
 
 /**
@@ -751,13 +759,7 @@ export function hexToNpub(publicKeyHex: string): string {
  * console.log(nsec); // "nsec1..."
  */
 export function hexToNsec(privateKeyHex: string): string {
-  try {
-    logger.log("Converting hex to nsec");
-    return nip19.nsecEncode(privateKeyHex);
-  } catch (error) {
-    logger.error("Failed to encode nsec:", error?.toString());
-    throw error;
-  }
+  return nip19.nsecEncode(privateKeyHex);
 }
 
 /**
@@ -774,19 +776,13 @@ export async function signMessage(
   message: string,
   privateKey: string,
 ): Promise<string> {
-  try {
-    const messageBytes = new TextEncoder().encode(message);
-    const messageHash = sha256(messageBytes);
-    const messageHashHex = bytesToHex(messageHash);
-    const privateKeyBytes = hexToBytes(privateKey);
-    const signature = schnorr.sign(hexToBytes(messageHashHex), privateKeyBytes);
-    privateKeyBytes.fill(0); // zero sensitive material
-    logger.log("Message signed successfully");
-    return bytesToHex(signature);
-  } catch (error) {
-    logger.error("Failed to sign message:", error?.toString());
-    throw error;
-  }
+  const messageBytes = new TextEncoder().encode(message);
+  const messageHash = sha256(messageBytes);
+  const messageHashHex = bytesToHex(messageHash);
+  const privateKeyBytes = hexToBytes(privateKey);
+  const signature = schnorr.sign(hexToBytes(messageHashHex), privateKeyBytes);
+  privateKeyBytes.fill(0); // zero sensitive material
+  return bytesToHex(signature);
 }
 
 /**
@@ -804,20 +800,14 @@ export async function verifySignature(
   signature: string,
   publicKey: string,
 ): Promise<boolean> {
-  try {
-    const messageBytes = new TextEncoder().encode(message);
-    const messageHash = sha256(messageBytes);
-    const messageHashHex = bytesToHex(messageHash);
-    logger.log("Verifying message signature");
-    return schnorr.verify(
-      hexToBytes(signature),
-      hexToBytes(messageHashHex),
-      hexToBytes(publicKey),
-    );
-  } catch (error) {
-    logger.error("Failed to verify signature:", error?.toString());
-    throw error;
-  }
+  const messageBytes = new TextEncoder().encode(message);
+  const messageHash = sha256(messageBytes);
+  const messageHashHex = bytesToHex(messageHash);
+  return schnorr.verify(
+    hexToBytes(signature),
+    hexToBytes(messageHashHex),
+    hexToBytes(publicKey),
+  );
 }
 
 /**
@@ -830,12 +820,7 @@ export async function verifySignature(
  * console.log(hex); // "1234567890abcdef..."
  */
 export function nsecToPrivateKey(nsec: string): string {
-  try {
-    return nip19.nsecDecode(nsec);
-  } catch (error) {
-    logger.error("Failed to decode nsec:", error?.toString());
-    throw error;
-  }
+  return nip19.nsecDecode(nsec);
 }
 
 /**
@@ -844,7 +829,7 @@ export function nsecToPrivateKey(nsec: string): string {
  * @param {string} password - The password to encrypt with
  * @param {number} [logn=16] - Scrypt log2(N) parameter (higher = slower but more secure)
  * @returns {string} The bech32-encoded ncryptsec string
- * @throws {Error} If encryption fails
+ * @throws {Error} If the key is not 32 bytes with 0 < d < n, or encryption fails
  * @example
  * const ncryptsec = toNcryptsec("1234567890abcdef...", "my-strong-password");
  * console.log(ncryptsec); // "ncryptsec1..."
@@ -854,17 +839,12 @@ export function toNcryptsec(
   password: string,
   logn: number = 16,
 ): string {
+  const secretBytes = hexToBytes(privateKeyHex);
   try {
-    const secretBytes = hexToBytes(privateKeyHex);
-    const result = nip49.encrypt(secretBytes, password, logn);
+    assertValidSecretKey(secretBytes);
+    return nip49Encrypt(secretBytes, password, logn);
+  } finally {
     secretBytes.fill(0); // zero sensitive material
-    return result;
-  } catch (error) {
-    logger.error(
-      "Failed to encrypt private key to ncryptsec:",
-      error?.toString(),
-    );
-    throw error;
   }
 }
 
@@ -879,13 +859,8 @@ export function toNcryptsec(
  * console.log(privateKeyHex); // "1234567890abcdef..."
  */
 export function fromNcryptsec(ncryptsec: string, password: string): string {
-  try {
-    const secretBytes = nip49.decrypt(ncryptsec, password);
-    const hex = bytesToHex(secretBytes);
-    secretBytes.fill(0); // zero sensitive material
-    return hex;
-  } catch (error) {
-    logger.error("Failed to decrypt ncryptsec:", error?.toString());
-    throw error;
-  }
+  const secretBytes = nip49Decrypt(ncryptsec, password);
+  const hex = bytesToHex(secretBytes);
+  secretBytes.fill(0); // zero sensitive material
+  return hex;
 }

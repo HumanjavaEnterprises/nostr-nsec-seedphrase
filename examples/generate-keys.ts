@@ -21,7 +21,7 @@ async function main() {
   console.log('Seed phrase valid:', isValid);
 
   // Recover a key pair from an existing seed phrase
-  const recovered = await seedPhraseToKeyPair(keyPair.seedPhrase);
+  const recovered = seedPhraseToKeyPair(keyPair.seedPhrase);
   console.log('Recovered private key (hex):', recovered.privateKey);
   console.log('Recovered public key (hex):', recovered.publicKey);
   console.log('Recovered nsec:', recovered.nsec);
